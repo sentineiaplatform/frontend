@@ -4,6 +4,7 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPassword'
 import { LoginPage } from '@/pages/auth/Login'
 import { RegisterPage } from '@/pages/auth/Register'
 import { AppSectionPage } from '@/pages/app/AppSectionPage'
+import { DenunciasPage } from '@/pages/denuncias/DenunciasPage'
 import { DashboardHomePage } from '@/pages/painel/DashboardHomePage'
 import { DesignSystemSetupPage } from '@/pages/DesignSystemSetupPage'
 import { HomePage } from '@/pages/HomePage'
@@ -27,7 +28,7 @@ export default function App() {
         <Route path="/app" element={<DashboardLayout />}>
           <Route index element={<Navigate to="painel" replace />} />
           <Route path="painel" element={<DashboardHomePage />} />
-          <Route path="denuncias" element={<AppSectionPage title="Denúncias" />} />
+          <Route path="denuncias" element={<DenunciasPage />} />
           <Route
             path="relatorios/visao-geral"
             element={<AppSectionPage title="Relatórios — Visão geral" />}
