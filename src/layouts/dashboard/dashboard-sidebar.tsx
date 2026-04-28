@@ -76,12 +76,12 @@ type NavLeaf = {
 }
 
 const principalLeafItems: NavLeaf[] = [
-  { to: '/dashboard', label: 'Painel', tooltip: 'Painel', icon: LayoutDashboardIcon },
-  { to: '/dashboard', label: 'Denúncias', tooltip: 'Denúncias', icon: InboxIcon, badge: '3' },
+  { to: '/app/painel', label: 'Painel', tooltip: 'Painel', icon: LayoutDashboardIcon },
+  { to: '/app/denuncias', label: 'Denúncias', tooltip: 'Denúncias', icon: InboxIcon, badge: '3' },
 ]
 
-function navActivePainel(label: string, pathname: string) {
-  return label === 'Painel' && pathname === '/dashboard'
+function navItemActive(pathname: string, to: string) {
+  return pathname === to
 }
 
 /** Submenus e fundo navy: texto mais claro. */
@@ -89,15 +89,15 @@ const subNavClass =
   'h-7 min-h-0 py-1 text-[12px] font-medium text-white/72 hover:bg-white/[0.06] hover:text-white'
 
 const relatoriosSub = [
-  { to: '/dashboard', label: 'Visão geral' },
-  { to: '/dashboard', label: 'Por período' },
-  { to: '/dashboard', label: 'Agendados' },
+  { to: '/app/relatorios/visao-geral', label: 'Visão geral' },
+  { to: '/app/relatorios/por-periodo', label: 'Por período' },
+  { to: '/app/relatorios/agendados', label: 'Agendados' },
 ]
 
 const financeiroSub = [
-  { to: '/dashboard', label: 'Carteira' },
-  { to: '/dashboard', label: 'Cartão corporativo' },
-  { to: '/dashboard', label: 'Repasses' },
+  { to: '/app/financeiro/carteira', label: 'Carteira' },
+  { to: '/app/financeiro/cartao-corporativo', label: 'Cartão corporativo' },
+  { to: '/app/financeiro/repasses', label: 'Repasses' },
 ]
 
 export function DashboardSidebar() {
@@ -118,6 +118,9 @@ export function DashboardSidebar() {
 
   const badgeMint =
     'rounded-full border border-white/25 bg-primary/25 px-1.5 py-px text-[10px] font-semibold leading-none text-white'
+
+  const relatoriosSectionActive = pathname.startsWith('/app/relatorios')
+  const financeiroSectionActive = pathname.startsWith('/app/financeiro')
 
   return (
     <Sidebar
@@ -156,7 +159,7 @@ export function DashboardSidebar() {
 
             <SidebarMenu className="gap-0.5">
               {principalLeafItems.map((item) => {
-                const active = navActivePainel(item.label, pathname)
+                const active = navItemActive(pathname, item.to)
                 const Icon = item.icon
                 return (
                   <SidebarMenuItem key={item.label}>
@@ -183,9 +186,9 @@ export function DashboardSidebar() {
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton
                       tooltip="Relatórios"
-                      isActive={false}
+                      isActive={relatoriosSectionActive}
                       type="button"
-                      className={navItemButtonClass(false)}
+                      className={navItemButtonClass(relatoriosSectionActive)}
                     >
                       <FileTextIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
                       <span>Relatórios</span>
@@ -197,13 +200,24 @@ export function DashboardSidebar() {
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub className="mx-0 ml-2.5 gap-0 border-l border-white/25 pl-2.5 pr-0 py-0.5">
-                      {relatoriosSub.map((sub) => (
-                        <SidebarMenuSubItem key={sub.label}>
-                          <SidebarMenuSubButton asChild size="sm" className={subNavClass}>
-                            <Link to={sub.to}>{sub.label}</Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
+                      {relatoriosSub.map((sub) => {
+                        const subActive = navItemActive(pathname, sub.to)
+                        return (
+                          <SidebarMenuSubItem key={sub.label}>
+                            <SidebarMenuSubButton
+                              asChild
+                              size="sm"
+                              isActive={subActive}
+                              className={cn(
+                                subNavClass,
+                                subActive && 'bg-white/10 text-white',
+                              )}
+                            >
+                              <Link to={sub.to}>{sub.label}</Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        )
+                      })}
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </Collapsible>
@@ -213,10 +227,13 @@ export function DashboardSidebar() {
                 <SidebarMenuButton
                   asChild
                   tooltip="Indicadores"
-                  isActive={false}
-                  className={cn(navItemButtonClass(false), 'pr-8')}
+                  isActive={navItemActive(pathname, '/app/indicadores')}
+                  className={cn(
+                    navItemButtonClass(navItemActive(pathname, '/app/indicadores')),
+                    'pr-8',
+                  )}
                 >
-                  <Link to="/dashboard">
+                  <Link to="/app/indicadores">
                     <BarChart3Icon className="shrink-0" strokeWidth={1.65} aria-hidden />
                     <span>Indicadores</span>
                   </Link>
@@ -243,9 +260,9 @@ export function DashboardSidebar() {
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton
                       tooltip="Financeiro"
-                      isActive={false}
+                      isActive={financeiroSectionActive}
                       type="button"
-                      className={navItemButtonClass(false)}
+                      className={navItemButtonClass(financeiroSectionActive)}
                     >
                       <LandmarkIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
                       <span>Financeiro</span>
@@ -257,13 +274,24 @@ export function DashboardSidebar() {
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub className="mx-0 ml-2.5 gap-0 border-l border-white/25 pl-2.5 pr-0 py-0.5">
-                      {financeiroSub.map((sub) => (
-                        <SidebarMenuSubItem key={sub.label}>
-                          <SidebarMenuSubButton asChild size="sm" className={subNavClass}>
-                            <Link to={sub.to}>{sub.label}</Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
+                      {financeiroSub.map((sub) => {
+                        const subActive = navItemActive(pathname, sub.to)
+                        return (
+                          <SidebarMenuSubItem key={sub.label}>
+                            <SidebarMenuSubButton
+                              asChild
+                              size="sm"
+                              isActive={subActive}
+                              className={cn(
+                                subNavClass,
+                                subActive && 'bg-white/10 text-white',
+                              )}
+                            >
+                              <Link to={sub.to}>{sub.label}</Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        )
+                      })}
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </Collapsible>
@@ -273,10 +301,10 @@ export function DashboardSidebar() {
                 <SidebarMenuButton
                   asChild
                   tooltip="Análises"
-                  isActive={false}
-                  className={navItemButtonClass(false)}
+                  isActive={navItemActive(pathname, '/app/analises')}
+                  className={navItemButtonClass(navItemActive(pathname, '/app/analises'))}
                 >
-                  <Link to="/dashboard">
+                  <Link to="/app/analises">
                     <Building2Icon className="shrink-0" strokeWidth={1.65} aria-hidden />
                     <span>Análises</span>
                   </Link>
@@ -294,10 +322,10 @@ export function DashboardSidebar() {
                 <SidebarMenuButton
                   asChild
                   tooltip="Recursos Pro"
-                  isActive={false}
-                  className={navItemButtonClass(false)}
+                  isActive={navItemActive(pathname, '/app/recursos-pro')}
+                  className={navItemButtonClass(navItemActive(pathname, '/app/recursos-pro'))}
                 >
-                  <Link to="/dashboard">
+                  <Link to="/app/recursos-pro">
                     <SparklesIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
                     <span>Recursos Pro</span>
                   </Link>
@@ -307,10 +335,10 @@ export function DashboardSidebar() {
                 <SidebarMenuButton
                   asChild
                   tooltip="Configurações"
-                  isActive={false}
-                  className={navItemButtonClass(false)}
+                  isActive={navItemActive(pathname, '/app/configuracoes')}
+                  className={navItemButtonClass(navItemActive(pathname, '/app/configuracoes'))}
                 >
-                  <Link to="/dashboard">
+                  <Link to="/app/configuracoes">
                     <SettingsIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
                     <span>Configurações</span>
                   </Link>
@@ -320,10 +348,10 @@ export function DashboardSidebar() {
                 <SidebarMenuButton
                   asChild
                   tooltip="Ajuda"
-                  isActive={false}
-                  className={navItemButtonClass(false)}
+                  isActive={navItemActive(pathname, '/app/ajuda')}
+                  className={navItemButtonClass(navItemActive(pathname, '/app/ajuda'))}
                 >
-                  <Link to="/dashboard">
+                  <Link to="/app/ajuda">
                     <CircleHelpIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
                     <span>Ajuda</span>
                   </Link>

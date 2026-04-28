@@ -59,7 +59,7 @@ export function LoginForm({ className }: Props) {
 
   function onSubmit(values: LoginFormValues) {
     setSessionDisplayName(displayNameFromEmail(values.email))
-    navigate('/dashboard', { replace: true })
+    navigate('/app/painel', { replace: true })
     // Integração backend em etapa seguinte
   }
 
