@@ -4,7 +4,7 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPassword'
 import { LoginPage } from '@/pages/auth/Login'
 import { RegisterPage } from '@/pages/auth/Register'
 import { AppSectionPage } from '@/pages/app/AppSectionPage'
-import { DashboardHomePage } from '@/pages/dashboard/DashboardHomePage'
+import { DashboardHomePage } from '@/pages/painel/DashboardHomePage'
 import { DesignSystemSetupPage } from '@/pages/DesignSystemSetupPage'
 import { HomePage } from '@/pages/HomePage'
 
