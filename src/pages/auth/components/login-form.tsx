@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   AlertCircleIcon,
   EyeIcon,
@@ -29,6 +29,7 @@ import {
 import { LoginLogo } from '@/pages/auth/components/login-logo'
 import { LoginSocialButtons } from '@/pages/auth/components/login-social-buttons'
 import { type LoginFormValues, loginSchema } from '@/pages/auth/login-schema'
+import { displayNameFromEmail, setSessionDisplayName } from '@/lib/session-user'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -38,6 +39,7 @@ type Props = {
 /** Formulário — tokens shadcn (`card`, `border`, `primary`, `muted-foreground`). */
 export function LoginForm({ className }: Props) {
   const ids = useId()
+  const navigate = useNavigate()
   const emailId = `${ids}-email`
   const passwordId = `${ids}-password`
   const rememberId = `${ids}-remember`
@@ -55,7 +57,9 @@ export function LoginForm({ className }: Props) {
     mode: 'onTouched',
   })
 
-  function onSubmit(_values: LoginFormValues) {
+  function onSubmit(values: LoginFormValues) {
+    setSessionDisplayName(displayNameFromEmail(values.email))
+    navigate('/dashboard', { replace: true })
     // Integração backend em etapa seguinte
   }
 

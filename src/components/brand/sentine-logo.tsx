@@ -33,10 +33,10 @@ function SentineMark({
         rx="13"
         className={
           dark
-            ? 'fill-white/[0.14] stroke-white/35'
-            : 'fill-brand-navy stroke-brand-navy/25'
+            ? 'fill-white stroke-slate-300'
+            : 'fill-brand-navy stroke-brand-navy'
         }
-        strokeWidth="1"
+        strokeWidth="1.25"
       />
       <path
         d="M17 24.5 21.8 29.8 31.8 17.8"
