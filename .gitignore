@@ -17,9 +17,8 @@ build
 storybook-static
 *.local
 
-# Vite cache (pre-bundle, deps cache)
-vite.config.*.timestamp-*
-vite.config.ts.timestamp*
+# Vite (timestamps de lock do config)
+vite.config*.timestamp*
 
 # Coverage & reports
 coverage
