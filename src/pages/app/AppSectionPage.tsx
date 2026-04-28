@@ -1,5 +1,5 @@
 /** Página temporal até cada rota ganhar UI própria. */
-export function AppSectionPage({ title }: { title: string }) {
+export function AppSectionPage({ title }: Readonly<{ title: string }>) {
   return (
     <div className="space-y-4">
       <h1 className="text-foreground font-heading text-2xl font-semibold tracking-tight">
