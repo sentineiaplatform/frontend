@@ -30,6 +30,11 @@ import { LoginLogo } from '@/pages/auth/components/login-logo'
 import { LoginSocialButtons } from '@/pages/auth/components/login-social-buttons'
 import { type LoginFormValues, loginSchema } from '@/pages/auth/login-schema'
 import { displayNameFromEmail, setSessionDisplayName } from '@/lib/session-user'
+import {
+  AUTH_INPUT_GROUP_ADDON_CLASS,
+  AUTH_INPUT_GROUP_CLASS,
+  AUTH_INPUT_GROUP_CONTROL_CLASS,
+} from '@/lib/auth-matched-input-group'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -91,10 +96,10 @@ export function LoginForm({ className }: Props) {
           <FieldGroup className="gap-5">
             <Field data-invalid={errors.email ? true : undefined}>
               <FieldLabel htmlFor={emailId}>E-mail</FieldLabel>
-              <InputGroup className="h-11 min-h-11 shadow-none">
+              <InputGroup className={AUTH_INPUT_GROUP_CLASS}>
                 <InputGroupAddon
                   align="inline-start"
-                  className="text-muted-foreground"
+                  className={AUTH_INPUT_GROUP_ADDON_CLASS}
                 >
                   <MailIcon className="size-4 shrink-0" aria-hidden />
                 </InputGroupAddon>
@@ -103,7 +108,7 @@ export function LoginForm({ className }: Props) {
                   autoComplete="email"
                   inputMode="email"
                   placeholder="seu-email@empresa.com"
-                  className="h-11 min-h-11"
+                  className={AUTH_INPUT_GROUP_CONTROL_CLASS}
                   aria-invalid={errors.email ? 'true' : undefined}
                   {...register('email')}
                 />
@@ -118,10 +123,10 @@ export function LoginForm({ className }: Props) {
 
             <Field data-invalid={errors.password ? true : undefined}>
               <FieldLabel htmlFor={passwordId}>Senha</FieldLabel>
-              <InputGroup className="h-11 min-h-11 shadow-none">
+              <InputGroup className={AUTH_INPUT_GROUP_CLASS}>
                 <InputGroupAddon
                   align="inline-start"
-                  className="text-muted-foreground"
+                  className={AUTH_INPUT_GROUP_ADDON_CLASS}
                 >
                   <LockIcon className="size-4 shrink-0" aria-hidden />
                 </InputGroupAddon>
@@ -135,7 +140,7 @@ export function LoginForm({ className }: Props) {
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
                       placeholder="············"
-                      className="h-11 min-h-11"
+                      className={AUTH_INPUT_GROUP_CONTROL_CLASS}
                       aria-invalid={errors.password ? 'true' : undefined}
                     />
                   )}

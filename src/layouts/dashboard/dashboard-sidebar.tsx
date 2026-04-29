@@ -3,13 +3,13 @@ import { Link, useLocation } from 'react-router-dom'
 import { useTheme } from 'next-themes'
 import {
   BarChart3Icon,
-  Building2Icon,
+  BotIcon,
   ChevronDownIcon,
   CircleHelpIcon,
   EyeIcon,
+  DatabaseIcon,
   FileTextIcon,
   InboxIcon,
-  LandmarkIcon,
   LayoutDashboardIcon,
   MoonIcon,
   SettingsIcon,
@@ -37,35 +37,9 @@ import {
   SidebarSeparator,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
+import { navItemButtonClass, navSubmenuActiveClass } from '@/layouts/dashboard/dashboard-nav-shared'
 import { cn } from '@/lib/utils'
-
-/** Ativo: tokens `primary` (não `--sidebar-accent`/surface menta); força estado `data-*` do SidebarMenuButton. */
-function navItemButtonClass(active: boolean) {
-  return cn(
-    'h-auto min-h-8 px-2 py-1.5 text-[13px] font-medium leading-snug shadow-none ring-0 transition-colors duration-150',
-    'justify-start gap-2 text-left [&_svg]:size-4',
-    active
-      ? [
-          'font-semibold',
-          'mx-0 w-full max-w-none rounded-none',
-          '!bg-primary !px-4 !text-primary-foreground',
-          '[&_svg]:!text-primary-foreground',
-          'hover:!bg-primary/90 hover:!text-primary-foreground',
-          'focus-visible:!ring-primary/40',
-          'active:!bg-primary/85 active:!text-primary-foreground',
-          'data-active:!bg-primary data-active:!text-primary-foreground data-active:[&_svg]:!text-primary-foreground',
-          'data-active:!font-semibold',
-          'group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!max-w-none group-data-[collapsible=icon]:!rounded-md group-data-[collapsible=icon]:!px-2',
-        ]
-      : [
-          'rounded-lg mx-2 px-2',
-          '!bg-transparent text-white/[0.88]',
-          'hover:!bg-white/10 hover:!text-white',
-          '[&_svg]:text-white/60 hover:[&_svg]:text-white/95',
-          'group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:max-w-none',
-        ],
-  )
-}
+import { toast } from 'sonner'
 
 type NavLeaf = {
   to: string
@@ -94,10 +68,9 @@ const relatoriosSub = [
   { to: '/app/relatorios/agendados', label: 'Agendados' },
 ]
 
-const financeiroSub = [
-  { to: '/app/financeiro/carteira', label: 'Carteira' },
-  { to: '/app/financeiro/cartao-corporativo', label: 'Cartão corporativo' },
-  { to: '/app/financeiro/repasses', label: 'Repasses' },
+const dadosMestresSub = [
+  { to: '/app/dados-mestres/status-denuncias', label: 'Status denúncias' },
+  { to: '/app/dados-mestres/categoria-denuncias', label: 'Categoria denúncias' },
 ]
 
 export function DashboardSidebar() {
@@ -119,8 +92,7 @@ export function DashboardSidebar() {
   const badgeMint =
     'rounded-full border border-white/25 bg-primary/25 px-1.5 py-px text-[10px] font-semibold leading-none text-white'
 
-  const relatoriosSectionActive = pathname.startsWith('/app/relatorios')
-  const financeiroSectionActive = pathname.startsWith('/app/financeiro')
+  const configuracoesActive = pathname.startsWith('/app/configuracoes')
 
   return (
     <Sidebar
@@ -186,9 +158,9 @@ export function DashboardSidebar() {
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton
                       tooltip="Relatórios"
-                      isActive={relatoriosSectionActive}
+                      isActive={false}
                       type="button"
-                      className={navItemButtonClass(relatoriosSectionActive)}
+                      className={navItemButtonClass(false)}
                     >
                       <FileTextIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
                       <span>Relatórios</span>
@@ -210,7 +182,7 @@ export function DashboardSidebar() {
                               isActive={subActive}
                               className={cn(
                                 subNavClass,
-                                subActive && 'bg-white/10 text-white',
+                                subActive && navSubmenuActiveClass(),
                               )}
                             >
                               <Link to={sub.to}>{sub.label}</Link>
@@ -259,13 +231,13 @@ export function DashboardSidebar() {
                 <Collapsible defaultOpen className="group w-full min-w-0">
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton
-                      tooltip="Financeiro"
-                      isActive={financeiroSectionActive}
+                      tooltip="Dados Mestres"
+                      isActive={false}
                       type="button"
-                      className={navItemButtonClass(financeiroSectionActive)}
+                      className={navItemButtonClass(false)}
                     >
-                      <LandmarkIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
-                      <span>Financeiro</span>
+                      <DatabaseIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
+                      <span>Dados Mestres</span>
                       <ChevronDownIcon
                         className="ml-auto size-3.5 shrink-0 text-white/45 transition-transform duration-200 group-data-[state=open]:rotate-180"
                         aria-hidden
@@ -274,7 +246,7 @@ export function DashboardSidebar() {
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub className="mx-0 ml-2.5 gap-0 border-l border-white/25 pl-2.5 pr-0 py-0.5">
-                      {financeiroSub.map((sub) => {
+                      {dadosMestresSub.map((sub) => {
                         const subActive = navItemActive(pathname, sub.to)
                         return (
                           <SidebarMenuSubItem key={sub.label}>
@@ -284,7 +256,7 @@ export function DashboardSidebar() {
                               isActive={subActive}
                               className={cn(
                                 subNavClass,
-                                subActive && 'bg-white/10 text-white',
+                                subActive && navSubmenuActiveClass(),
                               )}
                             >
                               <Link to={sub.to}>{sub.label}</Link>
@@ -299,16 +271,21 @@ export function DashboardSidebar() {
 
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  asChild
-                  tooltip="Análises"
-                  isActive={navItemActive(pathname, '/app/analises')}
-                  className={navItemButtonClass(navItemActive(pathname, '/app/analises'))}
+                  type="button"
+                  tooltip="Copiloto IA — em breve"
+                  isActive={false}
+                  className={cn(navItemButtonClass(false), 'text-white/[0.82] [&_svg]:text-white/55')}
+                  onClick={() => toast.message('Copiloto IA disponível em breve.')}
                 >
-                  <Link to="/app/analises">
-                    <Building2Icon className="shrink-0" strokeWidth={1.65} aria-hidden />
-                    <span>Análises</span>
-                  </Link>
+                  <BotIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
+                  <span>Copiloto IA</span>
                 </SidebarMenuButton>
+                <SidebarMenuBadge
+                  title="Em breve"
+                  className="rounded-full border border-white/25 bg-white/15 px-1.5 py-px text-[9px] font-semibold uppercase leading-none tracking-wide text-white/90"
+                >
+                  Breve
+                </SidebarMenuBadge>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
@@ -335,8 +312,8 @@ export function DashboardSidebar() {
                 <SidebarMenuButton
                   asChild
                   tooltip="Configurações"
-                  isActive={navItemActive(pathname, '/app/configuracoes')}
-                  className={navItemButtonClass(navItemActive(pathname, '/app/configuracoes'))}
+                  isActive={configuracoesActive}
+                  className={navItemButtonClass(configuracoesActive)}
                 >
                   <Link to="/app/configuracoes">
                     <SettingsIcon className="shrink-0" strokeWidth={1.65} aria-hidden />

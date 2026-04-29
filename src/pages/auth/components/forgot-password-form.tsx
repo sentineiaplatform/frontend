@@ -21,6 +21,11 @@ import {
   type ForgotPasswordFormValues,
   forgotPasswordSchema,
 } from '@/pages/auth/forgot-password-schema'
+import {
+  AUTH_INPUT_GROUP_ADDON_CLASS,
+  AUTH_INPUT_GROUP_CLASS,
+  AUTH_INPUT_GROUP_CONTROL_CLASS,
+} from '@/lib/auth-matched-input-group'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -100,10 +105,10 @@ export function ForgotPasswordForm({ className }: Props) {
             <FieldGroup className="gap-5">
               <Field data-invalid={errors.email ? true : undefined}>
                 <FieldLabel htmlFor={emailId}>E-mail</FieldLabel>
-                <InputGroup className="h-11 min-h-11 shadow-none">
+                <InputGroup className={AUTH_INPUT_GROUP_CLASS}>
                   <InputGroupAddon
                     align="inline-start"
-                    className="text-muted-foreground"
+                    className={AUTH_INPUT_GROUP_ADDON_CLASS}
                   >
                     <MailIcon className="size-4 shrink-0" aria-hidden />
                   </InputGroupAddon>
@@ -112,7 +117,7 @@ export function ForgotPasswordForm({ className }: Props) {
                     autoComplete="email"
                     inputMode="email"
                     placeholder="seu-email@empresa.com"
-                    className="h-11 min-h-11"
+                    className={AUTH_INPUT_GROUP_CONTROL_CLASS}
                     aria-invalid={errors.email ? 'true' : undefined}
                     {...register('email')}
                   />

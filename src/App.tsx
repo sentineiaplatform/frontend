@@ -4,10 +4,17 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPassword'
 import { LoginPage } from '@/pages/auth/Login'
 import { RegisterPage } from '@/pages/auth/Register'
 import { AppSectionPage } from '@/pages/app/AppSectionPage'
+import { ConfiguracoesGeralPage } from '@/pages/configuracoes/ConfiguracoesGeralPage'
+import { ConfiguracoesPerfilPage } from '@/pages/configuracoes/ConfiguracoesPerfilPage'
+import { ConfiguracoesLogsPage } from '@/pages/configuracoes/ConfiguracoesLogsPage'
+import { ConfiguracoesSegurancaPage } from '@/pages/configuracoes/ConfiguracoesSegurancaPage'
 import { DenunciasPage } from '@/pages/denuncias/DenunciasPage'
+import { CategoriaDenunciasPage } from '@/pages/dados-mestres/CategoriaDenunciasPage'
+import { StatusDenunciasPage } from '@/pages/dados-mestres/StatusDenunciasPage'
 import { DashboardHomePage } from '@/pages/painel/DashboardHomePage'
 import { DesignSystemSetupPage } from '@/pages/DesignSystemSetupPage'
 import { HomePage } from '@/pages/HomePage'
+import { AjudaSuportePage } from '@/pages/ajuda/AjudaSuportePage'
 
 export default function App() {
   return (
@@ -42,22 +49,28 @@ export default function App() {
             element={<AppSectionPage title="Relatórios — Agendados" />}
           />
           <Route path="indicadores" element={<AppSectionPage title="Indicadores" />} />
-          <Route
-            path="financeiro/carteira"
-            element={<AppSectionPage title="Financeiro — Carteira" />}
-          />
-          <Route
-            path="financeiro/cartao-corporativo"
-            element={<AppSectionPage title="Financeiro — Cartão corporativo" />}
-          />
-          <Route
-            path="financeiro/repasses"
-            element={<AppSectionPage title="Financeiro — Repasses" />}
-          />
+          <Route path="dados-mestres/status-denuncias" element={<StatusDenunciasPage />} />
+          <Route path="dados-mestres/categoria-denuncias" element={<CategoriaDenunciasPage />} />
           <Route path="analises" element={<AppSectionPage title="Análises" />} />
           <Route path="recursos-pro" element={<AppSectionPage title="Recursos Pro" />} />
-          <Route path="configuracoes" element={<AppSectionPage title="Configurações" />} />
-          <Route path="ajuda" element={<AppSectionPage title="Ajuda" />} />
+          <Route
+            path="configuracoes"
+            element={<Navigate to="/app/configuracoes/geral" replace />}
+          />
+          <Route
+            path="configuracoes/geral"
+            element={<ConfiguracoesGeralPage />}
+          />
+          <Route
+            path="configuracoes/perfil"
+            element={<ConfiguracoesPerfilPage />}
+          />
+          <Route
+            path="configuracoes/seguranca"
+            element={<ConfiguracoesSegurancaPage />}
+          />
+          <Route path="configuracoes/logs" element={<ConfiguracoesLogsPage />} />
+          <Route path="ajuda" element={<AjudaSuportePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

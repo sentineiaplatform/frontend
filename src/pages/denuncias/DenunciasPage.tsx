@@ -337,7 +337,7 @@ function pinTdCheckbox(sel: boolean) {
 
 function pinTdAcoes(sel: boolean) {
   return cn(
-    'pin-actions sticky right-0 z-[35] min-w-[12.5rem] border-l border-border/40 px-2 py-2 align-middle text-right',
+    'pin-actions sticky right-0 z-[35] w-[1%] whitespace-nowrap border-l border-border/40 px-2 py-2 align-middle text-right',
     'backdrop-blur-[1px] shadow-[-14px_0_20px_-12px_rgba(0,0,0,0.06)] dark:shadow-black/35',
     sel ? 'bg-muted/48' : 'bg-background',
     'group-hover/table-row:bg-muted/12 dark:bg-background dark:group-hover/table-row:bg-muted/15',
@@ -942,19 +942,13 @@ export function DenunciasPage() {
               </TableHead>
               <TableHead
                 className={cn(
-                  'text-muted-foreground sticky right-0 z-40 min-w-[12.5rem] px-2 py-2 text-right',
+                  'text-muted-foreground sticky right-0 z-40 w-[1%] whitespace-nowrap px-2 py-2 text-center',
                   'border-l border-border/40 bg-muted/[0.92] shadow-[-14px_0_20px_-12px_rgba(0,0,0,0.09)] backdrop-blur-sm dark:bg-muted/95 dark:shadow-black/35',
                   'text-[11px]',
                 )}
               >
-                <span className="text-muted-foreground inline-flex flex-col items-end gap-1">
-                  <span className="text-[10px] font-semibold tracking-wide uppercase">Ações</span>
-                  <span className="inline-flex items-center justify-end gap-1 opacity-70" aria-hidden>
-                    <Eye className="size-3 shrink-0" strokeWidth={1.75} />
-                    <Tags className="size-3 shrink-0" strokeWidth={1.75} />
-                    <Share2 className="size-3 shrink-0" strokeWidth={1.75} />
-                    <Archive className="size-3 shrink-0" strokeWidth={1.75} />
-                  </span>
+                <span className="text-muted-foreground block w-full text-center text-[10px] font-semibold tracking-wide uppercase">
+                  Ações
                 </span>
               </TableHead>
             </TableRow>

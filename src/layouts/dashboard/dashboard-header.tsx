@@ -38,6 +38,7 @@ export function DashboardHeader() {
     <header
       className={cn(
         'bg-brand-navy text-white',
+        'border-b border-white/15',
         'fixed inset-x-0 top-0 z-50 flex min-h-14 w-full shrink-0 flex-wrap items-center gap-3 px-4 py-2.5 md:gap-4 md:px-6',
       )}
     >

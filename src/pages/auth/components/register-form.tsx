@@ -32,6 +32,11 @@ import {
   type RegisterFormValues,
   registerSchema,
 } from '@/pages/auth/register-schema'
+import {
+  AUTH_INPUT_GROUP_ADDON_CLASS,
+  AUTH_INPUT_GROUP_CLASS,
+  AUTH_INPUT_GROUP_CONTROL_CLASS,
+} from '@/lib/auth-matched-input-group'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -97,10 +102,10 @@ export function RegisterForm({ className }: Props) {
           <FieldGroup className="gap-5">
             <Field data-invalid={errors.name ? true : undefined}>
               <FieldLabel htmlFor={nameId}>Nome</FieldLabel>
-              <InputGroup className="h-11 min-h-11 shadow-none">
+              <InputGroup className={AUTH_INPUT_GROUP_CLASS}>
                 <InputGroupAddon
                   align="inline-start"
-                  className="text-muted-foreground"
+                  className={AUTH_INPUT_GROUP_ADDON_CLASS}
                 >
                   <UserIcon className="size-4 shrink-0" aria-hidden />
                 </InputGroupAddon>
@@ -108,7 +113,7 @@ export function RegisterForm({ className }: Props) {
                   id={nameId}
                   autoComplete="name"
                   placeholder="Seu nome completo"
-                  className="h-11 min-h-11"
+                  className={AUTH_INPUT_GROUP_CONTROL_CLASS}
                   aria-invalid={errors.name ? 'true' : undefined}
                   {...register('name')}
                 />
@@ -123,10 +128,10 @@ export function RegisterForm({ className }: Props) {
 
             <Field data-invalid={errors.email ? true : undefined}>
               <FieldLabel htmlFor={emailId}>E-mail</FieldLabel>
-              <InputGroup className="h-11 min-h-11 shadow-none">
+              <InputGroup className={AUTH_INPUT_GROUP_CLASS}>
                 <InputGroupAddon
                   align="inline-start"
-                  className="text-muted-foreground"
+                  className={AUTH_INPUT_GROUP_ADDON_CLASS}
                 >
                   <MailIcon className="size-4 shrink-0" aria-hidden />
                 </InputGroupAddon>
@@ -135,7 +140,7 @@ export function RegisterForm({ className }: Props) {
                   autoComplete="email"
                   inputMode="email"
                   placeholder="seu-email@empresa.com"
-                  className="h-11 min-h-11"
+                  className={AUTH_INPUT_GROUP_CONTROL_CLASS}
                   aria-invalid={errors.email ? 'true' : undefined}
                   {...register('email')}
                 />
@@ -150,10 +155,10 @@ export function RegisterForm({ className }: Props) {
 
             <Field data-invalid={errors.password ? true : undefined}>
               <FieldLabel htmlFor={passwordId}>Senha</FieldLabel>
-              <InputGroup className="h-11 min-h-11 shadow-none">
+              <InputGroup className={AUTH_INPUT_GROUP_CLASS}>
                 <InputGroupAddon
                   align="inline-start"
-                  className="text-muted-foreground"
+                  className={AUTH_INPUT_GROUP_ADDON_CLASS}
                 >
                   <LockIcon className="size-4 shrink-0" aria-hidden />
                 </InputGroupAddon>
@@ -167,7 +172,7 @@ export function RegisterForm({ className }: Props) {
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="new-password"
                       placeholder="Mínimo 8 caracteres"
-                      className="h-11 min-h-11"
+                      className={AUTH_INPUT_GROUP_CONTROL_CLASS}
                       aria-invalid={errors.password ? 'true' : undefined}
                     />
                   )}
@@ -200,10 +205,10 @@ export function RegisterForm({ className }: Props) {
 
             <Field data-invalid={errors.confirmPassword ? true : undefined}>
               <FieldLabel htmlFor={confirmId}>Confirmar senha</FieldLabel>
-              <InputGroup className="h-11 min-h-11 shadow-none">
+              <InputGroup className={AUTH_INPUT_GROUP_CLASS}>
                 <InputGroupAddon
                   align="inline-start"
-                  className="text-muted-foreground"
+                  className={AUTH_INPUT_GROUP_ADDON_CLASS}
                 >
                   <LockIcon className="size-4 shrink-0" aria-hidden />
                 </InputGroupAddon>
@@ -217,7 +222,7 @@ export function RegisterForm({ className }: Props) {
                       type={showConfirm ? 'text' : 'password'}
                       autoComplete="new-password"
                       placeholder="Repita a senha"
-                      className="h-11 min-h-11"
+                      className={AUTH_INPUT_GROUP_CONTROL_CLASS}
                       aria-invalid={errors.confirmPassword ? 'true' : undefined}
                     />
                   )}
