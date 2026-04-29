@@ -5,6 +5,7 @@ import {
   Building2,
   BriefcaseBusiness,
   Calendar,
+  Check,
   CircleDot,
   ClipboardList,
   Columns3,
@@ -43,10 +44,12 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
@@ -63,6 +66,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
+  registrosKanbanAgrupar,
+  RegistrosKanban,
   RegistrosListaPaginada,
   RegistrosPageHeader,
 } from '@/components/registros'
@@ -93,7 +98,7 @@ const STATUS_LABEL: Record<DenunciaStatus, string> = {
 
 type ColunaOpcional = 'registradoEm' | 'categoria' | 'canal' | 'status'
 
-/** Modo de lista — quadro Kanban será implementado na sequência. */
+/** Modo de lista: tabela ou quadro Kanban (agrupamento configurável no diálogo). */
 type ModoListaDenuncias = 'tabela' | 'kanban'
 
 const ROTULO_COLUNA: Record<ColunaOpcional, string> = {
@@ -105,6 +110,98 @@ const ROTULO_COLUNA: Record<ColunaOpcional, string> = {
 
 /** Colunas extras sempre visíveis (simulam tabela larga + scroll horizontal). */
 const COLUNAS_EXTRAS_FIXAS = 5
+
+type CampoKanbanDenuncias =
+  | 'status'
+  | 'prioridade'
+  | 'canal'
+  | 'categoria'
+  | 'departamento'
+  | 'tipoEntrada'
+
+const ROTULO_CAMPO_KANBAN: Record<CampoKanbanDenuncias, string> = {
+  status: 'Status',
+  prioridade: 'Prioridade',
+  canal: 'Canal',
+  categoria: 'Categoria',
+  departamento: 'Departamento',
+  tipoEntrada: 'Tipo de entrada',
+}
+
+const ORDEM_STATUS_KANBAN: DenunciaStatus[] = ['aberta', 'em_analise', 'encerrada']
+
+function groupByDenunciaCampoKanban(
+  d: DenunciaMock,
+  campo: CampoKanbanDenuncias,
+): string {
+  switch (campo) {
+    case 'status':
+      return d.status
+    case 'prioridade':
+      return d.prioridade
+    case 'canal':
+      return d.canal
+    case 'categoria':
+      return d.categoria
+    case 'departamento':
+      return d.departamento
+    case 'tipoEntrada':
+      return d.tipoEntrada
+    default:
+      return ''
+  }
+}
+
+function ordemSecoesKanban(campo: CampoKanbanDenuncias): string[] | undefined {
+  switch (campo) {
+    case 'status':
+      return ORDEM_STATUS_KANBAN
+    case 'prioridade':
+      return ['P1', 'P2', 'P3']
+    default:
+      return undefined
+  }
+}
+
+function rotuloSecaoKanban(campo: CampoKanbanDenuncias, chave: string): string {
+  if (campo === 'status') {
+    const s = chave as DenunciaStatus
+    if (s in STATUS_LABEL) return STATUS_LABEL[s]
+  }
+  return chave
+}
+
+function aplicarValorCampoKanban(
+  d: DenunciaMock,
+  campo: CampoKanbanDenuncias,
+  chaveColuna: string,
+): DenunciaMock {
+  const atualizadoEm = new Date().toISOString().slice(0, 19)
+  switch (campo) {
+    case 'status':
+      return {
+        ...d,
+        status: chaveColuna as DenunciaStatus,
+        atualizadoEm,
+      }
+    case 'prioridade':
+      return {
+        ...d,
+        prioridade: chaveColuna as DenunciaPrioridade,
+        atualizadoEm,
+      }
+    case 'canal':
+      return { ...d, canal: chaveColuna, atualizadoEm }
+    case 'categoria':
+      return { ...d, categoria: chaveColuna, atualizadoEm }
+    case 'departamento':
+      return { ...d, departamento: chaveColuna, atualizadoEm }
+    case 'tipoEntrada':
+      return { ...d, tipoEntrada: chaveColuna, atualizadoEm }
+    default:
+      return d
+  }
+}
 
 function prioridadeClass(p: DenunciaPrioridade) {
   switch (p) {
@@ -248,6 +345,9 @@ function pinTdAcoes(sel: boolean) {
 }
 
 export function DenunciasPage() {
+  const [denuncias, setDenuncias] = useState<DenunciaMock[]>(() =>
+    DENUNCIAS_MOCK.map((row) => ({ ...row })),
+  )
   const [pagina, setPagina] = useState(1)
   const [itensPorPagina, setItensPorPagina] = useState(20)
   const [busca, setBusca] = useState('')
@@ -260,16 +360,17 @@ export function DenunciasPage() {
     status: true,
   })
   const [modoLista, setModoLista] = useState<ModoListaDenuncias>('tabela')
+  const [campoKanban, setCampoKanban] = useState<CampoKanbanDenuncias>('status')
   const [selecao, setSelecao] = useState<Set<string>>(() => new Set())
 
   const canaisUnicos = useMemo(() => {
-    const s = new Set(DENUNCIAS_MOCK.map((d) => d.canal))
+    const s = new Set(denuncias.map((d) => d.canal))
     return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  }, [])
+  }, [denuncias])
 
   const dadosFiltrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
-    return DENUNCIAS_MOCK.filter((d) => {
+    return denuncias.filter((d) => {
       const matchBusca =
         q.length === 0 ||
         d.protocolo.toLowerCase().includes(q) ||
@@ -282,7 +383,7 @@ export function DenunciasPage() {
       const matchCanal = filtroCanal === 'todos' || d.canal === filtroCanal
       return matchBusca && matchStatus && matchCanal
     })
-  }, [busca, filtroStatus, filtroCanal])
+  }, [denuncias, busca, filtroStatus, filtroCanal])
 
   useEffect(() => {
     setPagina(1)
@@ -321,6 +422,47 @@ export function DenunciasPage() {
 
   const filtrosAtivos =
     busca.trim().length > 0 || filtroStatus !== 'todos' || filtroCanal !== 'todos'
+
+  const secoesKanban = useMemo(
+    () =>
+      registrosKanbanAgrupar(
+        dadosFiltrados,
+        (d) => groupByDenunciaCampoKanban(d, campoKanban),
+        ordemSecoesKanban(campoKanban),
+      ),
+    [dadosFiltrados, campoKanban],
+  )
+
+  const ordemColunasKanban = useMemo(
+    () => secoesKanban.map((s) => s.chave),
+    [secoesKanban],
+  )
+
+  const colunasKanban = useMemo(() => {
+    const o: Record<string, DenunciaMock[]> = {}
+    for (const s of secoesKanban) {
+      o[s.chave] = s.itens
+    }
+    return o
+  }, [secoesKanban])
+
+  const aoColunasKanbanChange = (next: Record<string, DenunciaMock[]>) => {
+    const idsFiltrados = new Set(dadosFiltrados.map((x) => x.id))
+    setDenuncias((prev) => {
+      const flat: DenunciaMock[] = []
+      for (const chave of ordemColunasKanban) {
+        for (const item of next[chave] ?? []) {
+          flat.push(aplicarValorCampoKanban(item, campoKanban, chave))
+        }
+      }
+      const updated = new Map(flat.map((d) => [d.id, d]))
+      return prev.map((d) => {
+        if (!idsFiltrados.has(d.id)) return d
+        const u = updated.get(d.id)
+        return u ?? d
+      })
+    })
+  }
 
   const limparFiltros = () => {
     setBusca('')
@@ -363,8 +505,8 @@ export function DenunciasPage() {
   const limparSelecao = () => setSelecao(new Set())
 
   const registrosSelecionados = useMemo(
-    () => DENUNCIAS_MOCK.filter((d) => selecao.has(d.id)),
-    [selecao],
+    () => denuncias.filter((d) => selecao.has(d.id)),
+    [denuncias, selecao],
   )
   const qtdSelecionados = selecao.size
   const temSelecao = qtdSelecionados > 0
@@ -469,63 +611,89 @@ export function DenunciasPage() {
                 Visualização
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-52">
-              <DropdownMenuLabel className="text-muted-foreground text-[11px] font-normal uppercase">
+            <DropdownMenuContent align="start" className="w-52 p-1">
+              <DropdownMenuLabel className="text-muted-foreground px-1.5 text-[11px] font-normal uppercase">
                 Modo da lista
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup
-                value={modoLista}
-                onValueChange={(value) => {
-                  if (value === 'tabela' || value === 'kanban') setModoLista(value)
-                }}
+              <DropdownMenuItem
+                className="gap-2"
+                onSelect={() => setModoLista('tabela')}
               >
-                <DropdownMenuRadioItem value="tabela" className="gap-2">
-                  <TableProperties className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
-                  Tabela
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="kanban" className="gap-2">
+                <TableProperties className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
+                <span className="flex-1">Tabela</span>
+                {modoLista === 'tabela' ? (
+                  <Check className="text-primary size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                ) : (
+                  <span className="size-3.5 shrink-0" aria-hidden />
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="gap-2 [&>svg:last-child]:ml-0">
                   <Kanban className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
-                  <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                    <span>Quadro Kanban</span>
-                    <span className="text-muted-foreground text-[10px] font-normal uppercase tracking-wide">
-                      em breve
-                    </span>
+                  <span className="flex flex-1 items-center gap-2">
+                    <span className="flex-1">Quadro Kanban</span>
+                    {modoLista === 'kanban' ? (
+                      <Check className="text-primary size-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                    ) : null}
                   </span>
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent sideOffset={6} alignOffset={0} className="min-w-[12.5rem] p-1">
+                  <DropdownMenuLabel className="text-muted-foreground px-1.5 text-[10px] font-normal uppercase">
+                    Agrupar por
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {(Object.keys(ROTULO_CAMPO_KANBAN) as CampoKanbanDenuncias[]).map((id) => (
+                    <DropdownMenuItem
+                      key={id}
+                      className="gap-2 pl-2"
+                      onSelect={() => {
+                        setCampoKanban(id)
+                        setModoLista('kanban')
+                      }}
+                    >
+                      <span className="flex-1">{ROTULO_CAMPO_KANBAN[id]}</span>
+                      {modoLista === 'kanban' && campoKanban === id ? (
+                        <Check className="text-primary size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                      ) : null}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-border/40 bg-transparent h-8 gap-1 text-xs shadow-none"
-              >
-                <Columns3 className="size-3" aria-hidden />
-                Colunas
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              <DropdownMenuLabel className="text-muted-foreground text-[11px] font-normal uppercase">
-                Exibir
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {(Object.keys(ROTULO_COLUNA) as ColunaOpcional[]).map((id) => (
-                <DropdownMenuCheckboxItem
-                  key={id}
-                  checked={colunasVisiveis[id]}
-                  onCheckedChange={(checked) => alternarColuna(id, checked === true)}
-                  onSelect={(e) => e.preventDefault()}
+          {modoLista === 'tabela' ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-border/40 bg-transparent h-8 gap-1 text-xs shadow-none"
                 >
-                  {ROTULO_COLUNA[id]}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  <Columns3 className="size-3" aria-hidden />
+                  Colunas
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuLabel className="text-muted-foreground text-[11px] font-normal uppercase">
+                  Exibir
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {(Object.keys(ROTULO_COLUNA) as ColunaOpcional[]).map((id) => (
+                  <DropdownMenuCheckboxItem
+                    key={id}
+                    checked={colunasVisiveis[id]}
+                    onCheckedChange={(checked) => alternarColuna(id, checked === true)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {ROTULO_COLUNA[id]}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
 
         <div className="flex w-full shrink-0 flex-nowrap items-center justify-end gap-2 sm:w-auto sm:justify-end sm:gap-2 md:gap-3">
@@ -973,22 +1141,74 @@ export function DenunciasPage() {
         </Table>
       </RegistrosListaPaginada>
       :
-        <section
-          className="border-border/50 bg-muted/20 flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed px-6 py-14 text-center"
-          aria-label="Área do quadro Kanban"
-        >
-          <Kanban className="text-muted-foreground/55 size-14 shrink-0" strokeWidth={1.25} aria-hidden />
-          <h2 className="text-foreground mt-4 text-base font-semibold tracking-tight">
-            Quadro Kanban
-          </h2>
-          <p className="text-muted-foreground mt-2 max-w-md text-sm leading-relaxed">
-            Em breve você poderá organizar as denúncias por colunas e arrastar cartões entre estágios. Volte ao modo{' '}
-            <span className="text-foreground font-medium">Tabela</span> para usar a grade completa.
-          </p>
-          <p className="text-muted-foreground/80 mt-6 text-xs">
-            {totalItens} no filtro atual — visão Kanban ainda não disponível.
-          </p>
-        </section>
+        <RegistrosKanban
+          className="mt-0"
+          areaLabel="Quadro Kanban de denúncias"
+          ordemColunasChaves={ordemColunasKanban}
+          colunas={colunasKanban}
+          onColunasChange={aoColunasKanbanChange}
+          chaveItem={(d) => d.id}
+          rotuloSecao={(chave) => rotuloSecaoKanban(campoKanban, chave)}
+          renderCard={(d, { dragging }) => {
+            const CanalIcon = iconeCanal(d.canal)
+            return (
+              <article
+                className={cn(
+                  'border-border/55 bg-card text-card-foreground group/card relative rounded-lg border',
+                  'shadow-sm ring-1 ring-transparent transition-[box-shadow,border-color,background-color]',
+                  'hover:border-primary/25 hover:bg-accent/[0.45] hover:shadow-md hover:ring-primary/[0.12]',
+                  'dark:hover:bg-accent/[0.35]',
+                  'focus-within:border-primary/35 focus-within:ring-primary/20 focus-within:ring-2 focus-within:outline-none',
+                  dragging && 'opacity-[0.96]',
+                )}
+              >
+                <div
+                  className="pointer-events-none absolute inset-y-[6px] left-0 w-[3px] rounded-r-full bg-primary/45 opacity-85 group-hover/card:bg-primary/65"
+                  aria-hidden
+                />
+                <div className="relative px-3.5 py-2.5 pl-[15px]">
+                  <div className="flex items-start gap-2.5">
+                    <span
+                      className={cn(
+                        'bg-muted/60 text-muted-foreground mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md',
+                        'ring-1 ring-border/40 transition-colors group-hover/card:bg-muted/80 dark:bg-muted/40 dark:ring-border/30',
+                      )}
+                    >
+                      <CanalIcon className="size-3.5" aria-hidden strokeWidth={1.75} />
+                    </span>
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <p className="text-primary text-[13px] font-semibold leading-tight tracking-tight">
+                        {d.protocolo}
+                      </p>
+                      <p className="text-foreground/95 line-clamp-2 text-[12px] leading-snug">{d.categoria}</p>
+                      <p className="text-muted-foreground truncate text-[11px] leading-snug">{d.departamento}</p>
+                    </div>
+                  </div>
+                  <div
+                    className="border-border/40 mt-2.5 flex flex-wrap items-center gap-1.5 border-t pt-2.5 text-[10px] font-medium"
+                  >
+                    <span
+                      className={cn(
+                        'inline-flex h-5 shrink-0 items-center rounded-full px-2',
+                        statusDaDenunciaClass(d.status),
+                      )}
+                    >
+                      {STATUS_LABEL[d.status]}
+                    </span>
+                    <span
+                      className={cn(
+                        'shrink-0 rounded px-1.5 py-0.5 tabular-nums tracking-tight',
+                        prioridadeClass(d.prioridade),
+                      )}
+                    >
+                      {d.prioridade}
+                    </span>
+                  </div>
+                </div>
+              </article>
+            )
+          }}
+        />
       }
     </div>
   )
