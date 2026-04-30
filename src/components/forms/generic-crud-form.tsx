@@ -283,7 +283,7 @@ function GenericCrudFormContent<T extends FieldValues>({
         size="sm"
         className="text-muted-foreground h-9 gap-1.5 text-xs"
         onClick={onCancel}
-        disabled={isSubmitting || !isDirty}
+        disabled={isSubmitting || (stickyPageHeaderActions && !isDirty)}
       >
         <XIcon className="size-3.5 shrink-0 opacity-90" aria-hidden />
         {cancelLabel}

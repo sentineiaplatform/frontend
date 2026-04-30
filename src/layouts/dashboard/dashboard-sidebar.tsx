@@ -86,6 +86,7 @@ const relatoriosSub = [
 const dadosMestresSub = [
   { to: '/app/dados-mestres/status-denuncias', label: 'Status denúncias' },
   { to: '/app/dados-mestres/categoria-denuncias', label: 'Categoria denúncias' },
+  { to: '/app/dados-mestres/workflows', label: 'Workflows' },
 ]
 
 export function DashboardSidebar() {

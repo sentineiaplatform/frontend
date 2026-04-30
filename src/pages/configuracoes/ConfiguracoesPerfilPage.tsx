@@ -60,7 +60,7 @@ function partirNomeCompleto(nome: string) {
   return { first: p[0] ?? '', last: p.slice(1).join(' ') }
 }
 
-/** Perfil — mesmo padrão visual das outras abas de configurações. */
+/** Conta (perfil do utilizador) — mesmo padrão visual das outras abas de configurações. */
 export function ConfiguracoesPerfilPage() {
   const displayName = useSessionDisplayName()
   const { first: firstDefault, last: lastDefault } = useMemo(
@@ -97,12 +97,12 @@ export function ConfiguracoesPerfilPage() {
     const nome = `${values.firstName.trim()} ${values.lastName.trim()}`.trim()
     setSessionDisplayName(nome)
     reset(values)
-    toast.success('Perfil atualizado', {
+    toast.success('Conta atualizada', {
       description: 'As alterações foram salvas neste dispositivo (pré-backend).',
     })
     appendConfigAuditLog({
       category: 'perfil',
-      action: 'Perfil atualizado',
+      action: 'Conta atualizada',
       detail: nome || undefined,
     })
   }
@@ -135,7 +135,7 @@ export function ConfiguracoesPerfilPage() {
           </div>
           <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
             Operador · Analista de denúncias. Dados abaixo ficam só neste navegador até existir API de
-            perfil; o fuso horário vem de{' '}
+            conta; o fuso horário vem de{' '}
             <span className="text-foreground/90">Configurações → Geral</span>.
           </p>
           <p className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-0.5 pt-3 text-[11px] leading-relaxed sm:text-xs">

@@ -1,0 +1,118 @@
+/*
+ * Estilo de canvas inspirado no n8n (grelha de pontos, nós cartão, fios neutros, Bézier).
+ * Referência: editor n8n — handles circulares, conexões discretas, hover com acento.
+ */
+
+.workflow-flow-theme {
+  /* Superfície do “tabuleiro” (n8n: cinza muito claro / slate escuro) */
+  --wf-n8n-canvas: oklch(0.965 0.004 264);
+  --wf-n8n-dot: oklch(0.88 0.006 264);
+  --wf-n8n-wire: oklch(0.55 0.02 264);
+  --wf-n8n-wire-muted: oklch(0.62 0.015 264);
+  --wf-n8n-panel: oklch(1 0 0 / 92%);
+  --wf-n8n-panel-border: oklch(0.9 0.008 264);
+}
+
+.dark .workflow-flow-theme {
+  --wf-n8n-canvas: oklch(0.23 0.022 264);
+  --wf-n8n-dot: oklch(0.34 0.02 264);
+  --wf-n8n-wire: oklch(0.58 0.02 264);
+  --wf-n8n-wire-muted: oklch(0.5 0.018 264);
+  --wf-n8n-panel: oklch(0.26 0.022 264 / 94%);
+  --wf-n8n-panel-border: oklch(0.38 0.02 264);
+}
+
+/* Superfície do React Flow */
+.workflow-flow-theme.workflow-n8n-surface {
+  --xy-background-color: var(--wf-n8n-canvas);
+  background-color: var(--wf-n8n-canvas) !important;
+}
+
+/* Ligações: fio neutro; acento ao hover / seleção (como n8n) */
+.workflow-flow-theme .react-flow__edge-path {
+  stroke: var(--wf-n8n-wire);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition:
+    stroke 0.14s ease,
+    stroke-width 0.14s ease,
+    opacity 0.14s ease;
+}
+
+.workflow-flow-theme .react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--color-primary);
+  stroke-width: 2.25;
+  opacity: 1;
+}
+
+.workflow-flow-theme .react-flow__edge.selected .react-flow__edge-path,
+.workflow-flow-theme .react-flow__edge:focus-visible .react-flow__edge-path {
+  stroke: var(--color-primary);
+  stroke-width: 2.5;
+  opacity: 1;
+}
+
+.workflow-flow-theme .react-flow__connectionline path {
+  stroke: var(--color-primary);
+  stroke-width: 2;
+  stroke-dasharray: none;
+  opacity: 0.55;
+}
+
+/* Controlo de zoom: cartão flutuante tipo n8n */
+.workflow-flow-theme .react-flow__controls {
+  border-radius: 12px;
+  border: 1px solid var(--wf-n8n-panel-border);
+  background: var(--wf-n8n-panel);
+  box-shadow: 0 4px 24px oklch(0.2 0.04 264 / 0.08);
+  overflow: hidden;
+}
+
+.dark .workflow-flow-theme .react-flow__controls {
+  box-shadow: 0 6px 28px oklch(0.05 0.02 264 / 0.45);
+}
+
+.workflow-flow-theme .react-flow__controls-button {
+  border-bottom-color: var(--wf-n8n-panel-border);
+}
+
+.workflow-flow-theme .react-flow__attribution {
+  display: none;
+}
+
+/* Handles estilo n8n: círculos sempre visíveis, hit-area maior */
+.workflow-flow-theme .react-flow__handle.wf-h {
+  opacity: 0.88;
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.workflow-flow-theme .react-flow__node:hover .react-flow__handle.wf-h,
+.workflow-flow-theme .react-flow__node.selected .react-flow__handle.wf-h {
+  opacity: 1;
+}
+
+.workflow-flow-theme .react-flow__handle.wf-h.connectingto,
+.workflow-flow-theme .react-flow__handle.wf-h.connectingfrom,
+.workflow-flow-theme .react-flow__handle.wf-h.valid {
+  opacity: 1 !important;
+}
+
+.workflow-flow-theme .react-flow__handle.wf-h:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-primary) 22%, transparent);
+}
+
+/* Mini map */
+.workflow-flow-theme .react-flow__minimap {
+  border-radius: 12px !important;
+  border: 1px solid var(--wf-n8n-panel-border) !important;
+  background: var(--wf-n8n-panel) !important;
+  box-shadow: 0 4px 20px oklch(0.2 0.04 264 / 0.07);
+}
+
+.dark .workflow-flow-theme .react-flow__minimap {
+  box-shadow: 0 6px 24px oklch(0.05 0.02 264 / 0.4);
+}

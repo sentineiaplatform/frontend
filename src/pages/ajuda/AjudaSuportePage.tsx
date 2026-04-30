@@ -108,7 +108,7 @@ const GUIAS_RAPIDOS: ReadonlyArray<{ titulo: string; passos: string[] }> = [
   {
     titulo: 'Atualizar perfil e segurança',
     passos: [
-      'Vá em **Configurações** → **Perfil** para nome, contato e preferências.',
+      'Vá em **Configurações** → **Conta** para nome, contato e preferências.',
       'Use **Configurações** → **Segurança** para senha e opções de proteção, se disponíveis.',
     ],
   },
@@ -158,7 +158,7 @@ function pickMockReply(userText: string): string {
   if (t.includes('denúnc') || t.includes('denunc'))
     return 'Para registrar uma denúncia, acesse o menu **Denúncias** e use **Nova**. Preencha os campos obrigatórios e salve; você receberá um protocolo para acompanhamento.'
   if (t.includes('perfil') || t.includes('senha'))
-    return 'Perfil e preferências ficam em **Configurações** → **Perfil**. Segurança e senha costumam estar em **Configurações** → **Segurança** (conforme o que o produto expõe).'
+    return 'Conta e preferências ficam em **Configurações** → **Conta**. Segurança e senha costumam estar em **Configurações** → **Segurança** (conforme o que o produto expõe).'
   if (t.includes('quem vê') || t.includes('visibilidade') || t.includes('privacid'))
     return 'Quem visualiza cada denúncia depende do perfil e das regras da sua organização. Em dúvida sobre confidencialidade, peça orientação ao seu **administrador** ou ao time de compliance.'
   const i = Math.floor(Math.random() * MOCK_REPLIES.length)

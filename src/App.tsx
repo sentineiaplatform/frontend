@@ -8,11 +8,15 @@ import { ConfiguracoesGeralPage } from '@/pages/configuracoes/ConfiguracoesGeral
 import { ConfiguracoesPerfilPage } from '@/pages/configuracoes/ConfiguracoesPerfilPage'
 import { ConfiguracoesLogsPage } from '@/pages/configuracoes/ConfiguracoesLogsPage'
 import { ConfiguracoesSegurancaPage } from '@/pages/configuracoes/ConfiguracoesSegurancaPage'
+import { ConfiguracoesPerfisPage } from '@/pages/configuracoes/ConfiguracoesPerfisPage'
+import { ConfiguracoesMembrosPage } from '@/pages/configuracoes/ConfiguracoesMembrosPage'
+import { ConfiguracoesPermissoesPage } from '@/pages/configuracoes/ConfiguracoesPermissoesPage'
 import { DenunciaNovaPage } from '@/pages/denuncias/DenunciaNovaPage'
 import { DenunciasPage } from '@/pages/denuncias/DenunciasPage'
 import { CategoriaDenunciasPage } from '@/pages/dados-mestres/CategoriaDenunciasPage'
 import { StatusDenunciasPage } from '@/pages/dados-mestres/StatusDenunciasPage'
 import { StatusDenunciaFormPage } from '@/pages/dados-mestres/StatusDenunciaFormPage'
+import { WorkflowsPage } from '@/pages/dados-mestres/workflows/WorkflowsPage'
 import { CategoriaDenunciaFormPage } from '@/pages/dados-mestres/CategoriaDenunciaFormPage'
 import { DashboardHomePage } from '@/pages/painel/DashboardHomePage'
 import { DesignSystemSetupPage } from '@/pages/DesignSystemSetupPage'
@@ -59,6 +63,7 @@ export default function App() {
           <Route path="dados-mestres/categoria-denuncias" element={<CategoriaDenunciasPage />} />
           <Route path="dados-mestres/categoria-denuncias/new" element={<CategoriaDenunciaFormPage />} />
           <Route path="dados-mestres/categoria-denuncias/:id" element={<CategoriaDenunciaFormPage />} />
+          <Route path="dados-mestres/workflows" element={<WorkflowsPage />} />
           <Route path="analises" element={<AppSectionPage title="Análises" />} />
           <Route path="recursos-pro" element={<AppSectionPage title="Recursos Pro" />} />
           <Route
@@ -73,10 +78,13 @@ export default function App() {
             path="configuracoes/perfil"
             element={<ConfiguracoesPerfilPage />}
           />
+          <Route path="configuracoes/perfis" element={<ConfiguracoesPerfisPage />} />
           <Route
             path="configuracoes/seguranca"
             element={<ConfiguracoesSegurancaPage />}
           />
+          <Route path="configuracoes/membros" element={<ConfiguracoesMembrosPage />} />
+          <Route path="configuracoes/permissoes" element={<ConfiguracoesPermissoesPage />} />
           <Route path="configuracoes/logs" element={<ConfiguracoesLogsPage />} />
           <Route path="ajuda" element={<AjudaSuportePage />} />
         </Route>

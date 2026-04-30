@@ -3,10 +3,12 @@ import {
   AlertTriangleIcon,
   BellIcon,
   Building2Icon,
+  CircleUserRoundIcon,
   ClipboardCopyIcon,
   FileBarChartIcon,
   FlaskConicalIcon,
   HardDriveIcon,
+  KeyRoundIcon,
   ListFilterIcon,
   PlugIcon,
   ScrollTextIcon,
@@ -14,6 +16,7 @@ import {
   ShieldIcon,
   Trash2Icon,
   UserIcon,
+  UsersIcon,
   XIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -80,8 +83,11 @@ const LINHAS_LOGS_OPCOES = [10, 20, 35, 50] as const
 
 const categoriaLabel: Record<ConfigAuditLogEntry['category'], string> = {
   geral: 'Geral',
-  perfil: 'Perfil',
+  perfil: 'Conta',
+  perfis: 'Perfis',
   seguranca: 'Segurança',
+  membros: 'Membros',
+  permissoes: 'Permissões',
   integracao: 'Integração',
   notificacoes: 'Notificações',
   relatorios: 'Relatórios',
@@ -93,7 +99,10 @@ const categoryIcon: Record<
 > = {
   geral: Building2Icon,
   perfil: UserIcon,
+  perfis: CircleUserRoundIcon,
   seguranca: ShieldIcon,
+  membros: UsersIcon,
+  permissoes: KeyRoundIcon,
   integracao: PlugIcon,
   notificacoes: BellIcon,
   relatorios: FileBarChartIcon,
