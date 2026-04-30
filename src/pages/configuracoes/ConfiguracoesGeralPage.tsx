@@ -38,6 +38,7 @@ import {
   AUTH_INPUT_GROUP_ADDON_CLASS,
   AUTH_INPUT_GROUP_CLASS,
   AUTH_INPUT_GROUP_CONTROL_CLASS,
+  AUTH_SELECT_TRIGGER_IN_GROUP_CLASS,
 } from '@/lib/auth-matched-input-group'
 import { cn } from '@/lib/utils'
 
@@ -76,12 +77,6 @@ function readInitial(): GeralFormValues {
   } catch {
     return defaultGeralValues
   }
-}
-
-function selectTriggerClass() {
-  return cn(
-    'text-foreground data-placeholder:text-muted-foreground h-11 min-h-11 w-full min-w-0 flex-1 cursor-pointer rounded-none border-0 bg-transparent px-2 py-0 text-sm shadow-none focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[size=default]:h-11 [&_svg:not([class*="size-"])]:size-4',
-  )
 }
 
 /** Configurações gerais da instância (persistência local até existir API). */
@@ -245,7 +240,7 @@ export function ConfiguracoesGeralPage() {
                             ref={field.ref}
                             onBlur={field.onBlur}
                             aria-invalid={errors.locale ? 'true' : undefined}
-                            className={selectTriggerClass()}
+                            className={AUTH_SELECT_TRIGGER_IN_GROUP_CLASS}
                           >
                             <SelectValue placeholder="Idioma" />
                           </SelectTrigger>
@@ -290,7 +285,7 @@ export function ConfiguracoesGeralPage() {
                             ref={field.ref}
                             onBlur={field.onBlur}
                             aria-invalid={errors.dateFormat ? 'true' : undefined}
-                            className={selectTriggerClass()}
+                            className={AUTH_SELECT_TRIGGER_IN_GROUP_CLASS}
                           >
                             <SelectValue placeholder="Formato" />
                           </SelectTrigger>
@@ -338,7 +333,7 @@ export function ConfiguracoesGeralPage() {
                             ref={field.ref}
                             onBlur={field.onBlur}
                             aria-invalid={errors.defaultTimezone ? 'true' : undefined}
-                            className={selectTriggerClass()}
+                            className={AUTH_SELECT_TRIGGER_IN_GROUP_CLASS}
                           >
                             <SelectValue placeholder="Fuso" />
                           </SelectTrigger>

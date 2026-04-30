@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Archive,
   ArrowDownUp,
@@ -511,6 +512,8 @@ export function DenunciasPage() {
   const qtdSelecionados = selecao.size
   const temSelecao = qtdSelecionados > 0
 
+  const navigate = useNavigate()
+
   const colSpanVazio =
     1 +
     1 +
@@ -571,7 +574,7 @@ export function DenunciasPage() {
           variant="default"
           size="sm"
           className="h-9 gap-1.5 rounded-lg px-3"
-          onClick={() => toast.message('Fluxo em construção.')}
+          onClick={() => navigate('/app/denuncias/new')}
         >
           <Plus className="size-3.5" strokeWidth={2} aria-hidden />
           Nova
@@ -590,7 +593,7 @@ export function DenunciasPage() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar…"
-              className="border-border/50 bg-background/80 h-8 w-full border pl-8 text-[13px] shadow-none"
+              className="border-border/40 bg-muted/[0.92] dark:bg-muted/95 h-8 w-full border pl-8 text-[13px] shadow-none"
               aria-label="Buscar"
             />
           </div>
@@ -706,7 +709,7 @@ export function DenunciasPage() {
             <SelectTrigger
               size="sm"
               aria-label="Status"
-              className="border-border/50 bg-background/80 h-8 w-[min(100%,10.5rem)] gap-1.5 shadow-none"
+              className="border-border/40 bg-muted/[0.92] dark:bg-muted/95 h-8 w-[min(100%,10.5rem)] gap-1.5 shadow-none"
             >
               <SlidersHorizontal className="text-muted-foreground size-3 shrink-0" aria-hidden />
               <SelectValue placeholder="Status" />
@@ -725,7 +728,7 @@ export function DenunciasPage() {
             <SelectTrigger
               size="sm"
               aria-label="Canal"
-              className="border-border/50 bg-background/80 h-8 w-[min(100%,11.5rem)] gap-1.5 shadow-none"
+              className="border-border/40 bg-muted/[0.92] dark:bg-muted/95 h-8 w-[min(100%,11.5rem)] gap-1.5 shadow-none"
             >
               <Layers className="text-muted-foreground size-3 shrink-0" aria-hidden />
               <SelectValue placeholder="Canal" />

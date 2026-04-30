@@ -471,7 +471,7 @@ export function AjudaSuportePage() {
                       value={faqBusca}
                       onChange={(e) => setFaqBusca(e.target.value)}
                       placeholder="Buscar por assunto, ex.: denúncia, senha, painel…"
-                      className="border-border/60 bg-background/80 h-10 rounded-xl pl-10 pr-3 shadow-none"
+                      className="border-border/40 bg-muted/[0.92] dark:bg-muted/95 h-10 rounded-xl pl-10 pr-3 shadow-none"
                       aria-label="Buscar no FAQ"
                     />
                   </div>

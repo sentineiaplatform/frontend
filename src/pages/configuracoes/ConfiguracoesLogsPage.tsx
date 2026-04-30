@@ -426,7 +426,12 @@ export function ConfiguracoesLogsPage() {
                   <Label htmlFor="logs-search" className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
                     Busca
                   </Label>
-                  <InputGroup className={cn(AUTH_INPUT_GROUP_CLASS)}>
+                  <InputGroup
+                    className={cn(
+                      AUTH_INPUT_GROUP_CLASS,
+                      'border-border/40 bg-muted/[0.92] dark:bg-muted/95',
+                    )}
+                  >
                     <InputGroupAddon align="inline-start" className={AUTH_INPUT_GROUP_ADDON_CLASS}>
                       <SearchIcon className="size-4 shrink-0 opacity-80" aria-hidden />
                     </InputGroupAddon>

@@ -44,6 +44,7 @@ import {
   AUTH_INPUT_GROUP_ADDON_CLASS,
   AUTH_INPUT_GROUP_CLASS,
   AUTH_INPUT_GROUP_CONTROL_CLASS,
+  AUTH_SELECT_TRIGGER_IN_GROUP_CLASS,
 } from '@/lib/auth-matched-input-group'
 import {
   CONFIG_SEGURANCA_PREFS_KEY,
@@ -97,12 +98,6 @@ function readPrefsInitial(): SegurancaPrefsValues {
   } catch {
     return defaultPrefs
   }
-}
-
-function selectTriggerClass() {
-  return cn(
-    'text-foreground data-placeholder:text-muted-foreground h-11 min-h-11 w-full min-w-0 flex-1 cursor-pointer rounded-none border-0 bg-transparent px-2 py-0 text-sm shadow-none focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[size=default]:h-11 [&_svg:not([class*="size-"])]:size-4',
-  )
 }
 
 export function ConfiguracoesSegurancaPage() {
@@ -276,7 +271,7 @@ export function ConfiguracoesSegurancaPage() {
                           onBlur={field.onBlur}
                           aria-describedby="seg-lock-hint"
                           aria-invalid={prefsErrors.lockScreenMinutes ? 'true' : undefined}
-                          className={selectTriggerClass()}
+                          className={AUTH_SELECT_TRIGGER_IN_GROUP_CLASS}
                         >
                           <SelectValue placeholder="Escolha o intervalo" />
                         </SelectTrigger>

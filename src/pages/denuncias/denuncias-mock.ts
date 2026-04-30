@@ -184,26 +184,52 @@ const DENUNCIA_BASE_ROWS: DenunciaRowBase[] = [
 ]
 
 const PRIORIDS: DenunciaPrioridade[] = ['P1', 'P2', 'P3']
-const DEPARTAMENTOS = [
+
+/** Departamentos exibidos na listagem — reutilizados no formulário de nova denúncia. */
+export const DENUNCIA_DEPARTAMENTOS_MOCK = [
   'Compliance & integridade',
   'Recursos humanos',
   'Tecnologia e dados',
   'Jurídico institucional',
   'Gestão de risco',
-]
-const AREAS = [
+] as const
+
+/** Áreas demandadas na listagem. */
+export const DENUNCIA_AREAS_DEMANDA_MOCK = [
   'Ética e conduta corporativa',
   'Investigações internas — Nível II',
   'Canal público estadual federado',
   'Antitruste e políticas internas',
   'SLA institucional de 3ª linha',
-]
-const TIPO_ENTRADAS = [
+] as const
+
+/** Tipos de entrada (“Entrada”) na listagem. */
+export const DENUNCIA_TIPOS_ENTRADA_MOCK = [
   'Portal anônimo certificado',
   'Integração webhook ouvidoria.se',
   'Import CSV — triagem inicial',
   'API parceiros — canal seguro',
   'Registro físico auditável',
+] as const
+
+/** Canais usados na listagem. */
+export const DENUNCIA_CANAIS_MOCK = [
+  'Canal web',
+  'Telefone',
+  'Presencial',
+  'E-mail',
+] as const
+
+export const DENUNCIA_STATUS_FORM: { value: DenunciaStatus; label: string }[] = [
+  { value: 'aberta', label: 'Aberta' },
+  { value: 'em_analise', label: 'Em análise' },
+  { value: 'encerrada', label: 'Encerrada' },
+]
+
+export const DENUNCIA_PRIORIDADE_FORM: { value: DenunciaPrioridade; label: string }[] = [
+  { value: 'P1', label: 'P1 — urgente' },
+  { value: 'P2', label: 'P2 — média' },
+  { value: 'P3', label: 'P3 — rotina' },
 ]
 
 function dataAtualizacaoIso(registradoIso: string, diasOffset: number) {
@@ -220,9 +246,9 @@ export const DENUNCIAS_MOCK: DenunciaMock[] = DENUNCIA_BASE_ROWS.map((row, idx) 
   return {
     ...row,
     prioridade,
-    departamento: DEPARTAMENTOS[idx % DEPARTAMENTOS.length],
-    areaDemanda: AREAS[idx % AREAS.length],
-    tipoEntrada: TIPO_ENTRADAS[idx % TIPO_ENTRADAS.length],
+    departamento: DENUNCIA_DEPARTAMENTOS_MOCK[idx % DENUNCIA_DEPARTAMENTOS_MOCK.length],
+    areaDemanda: DENUNCIA_AREAS_DEMANDA_MOCK[idx % DENUNCIA_AREAS_DEMANDA_MOCK.length],
+    tipoEntrada: DENUNCIA_TIPOS_ENTRADA_MOCK[idx % DENUNCIA_TIPOS_ENTRADA_MOCK.length],
     atualizadoEm: dataAtualizacaoIso(row.registradoEm, dias),
   }
 })

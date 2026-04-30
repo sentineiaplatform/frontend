@@ -256,7 +256,7 @@ export function StatusDenunciasPage() {
             <SelectTrigger
               size="sm"
               aria-label="Ativo"
-              className="border-border/50 bg-background/80 h-8 w-[min(100%,10.5rem)] gap-1.5 shadow-none"
+              className="border-border/40 bg-muted/[0.92] dark:bg-muted/95 h-8 w-[min(100%,10.5rem)] gap-1.5 shadow-none"
             >
               <SlidersHorizontal className="text-muted-foreground size-3 shrink-0" aria-hidden />
               <SelectValue placeholder="Ativo" />

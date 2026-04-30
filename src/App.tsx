@@ -8,6 +8,7 @@ import { ConfiguracoesGeralPage } from '@/pages/configuracoes/ConfiguracoesGeral
 import { ConfiguracoesPerfilPage } from '@/pages/configuracoes/ConfiguracoesPerfilPage'
 import { ConfiguracoesLogsPage } from '@/pages/configuracoes/ConfiguracoesLogsPage'
 import { ConfiguracoesSegurancaPage } from '@/pages/configuracoes/ConfiguracoesSegurancaPage'
+import { DenunciaNovaPage } from '@/pages/denuncias/DenunciaNovaPage'
 import { DenunciasPage } from '@/pages/denuncias/DenunciasPage'
 import { CategoriaDenunciasPage } from '@/pages/dados-mestres/CategoriaDenunciasPage'
 import { StatusDenunciasPage } from '@/pages/dados-mestres/StatusDenunciasPage'
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/app" element={<DashboardLayout />}>
           <Route index element={<Navigate to="painel" replace />} />
           <Route path="painel" element={<DashboardHomePage />} />
+          <Route path="denuncias/new" element={<DenunciaNovaPage />} />
           <Route path="denuncias" element={<DenunciasPage />} />
           <Route
             path="relatorios/visao-geral"
