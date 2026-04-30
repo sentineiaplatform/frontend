@@ -11,6 +11,8 @@ import { ConfiguracoesSegurancaPage } from '@/pages/configuracoes/ConfiguracoesS
 import { DenunciasPage } from '@/pages/denuncias/DenunciasPage'
 import { CategoriaDenunciasPage } from '@/pages/dados-mestres/CategoriaDenunciasPage'
 import { StatusDenunciasPage } from '@/pages/dados-mestres/StatusDenunciasPage'
+import { StatusDenunciaFormPage } from '@/pages/dados-mestres/StatusDenunciaFormPage'
+import { CategoriaDenunciaFormPage } from '@/pages/dados-mestres/CategoriaDenunciaFormPage'
 import { DashboardHomePage } from '@/pages/painel/DashboardHomePage'
 import { DesignSystemSetupPage } from '@/pages/DesignSystemSetupPage'
 import { HomePage } from '@/pages/HomePage'
@@ -50,7 +52,11 @@ export default function App() {
           />
           <Route path="indicadores" element={<AppSectionPage title="Indicadores" />} />
           <Route path="dados-mestres/status-denuncias" element={<StatusDenunciasPage />} />
+          <Route path="dados-mestres/status-denuncias/new" element={<StatusDenunciaFormPage />} />
+          <Route path="dados-mestres/status-denuncias/:id" element={<StatusDenunciaFormPage />} />
           <Route path="dados-mestres/categoria-denuncias" element={<CategoriaDenunciasPage />} />
+          <Route path="dados-mestres/categoria-denuncias/new" element={<CategoriaDenunciaFormPage />} />
+          <Route path="dados-mestres/categoria-denuncias/:id" element={<CategoriaDenunciaFormPage />} />
           <Route path="analises" element={<AppSectionPage title="Análises" />} />
           <Route path="recursos-pro" element={<AppSectionPage title="Recursos Pro" />} />
           <Route

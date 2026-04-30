@@ -207,3 +207,35 @@
     transform: scaleX(1);
   }
 }
+
+/* LexKit (https://lexkit.dev/) — blocos dentro do formulário genérico */
+.lex-form-richtext-editor .lexkit-paragraph {
+  margin: 0.35em 0;
+}
+.lex-form-richtext-editor .lexkit-heading-h1,
+.lex-form-richtext-editor .lexkit-heading-h2,
+.lex-form-richtext-editor .lexkit-heading-h3 {
+  margin: 0.5em 0 0.25em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.lex-form-richtext-editor .lexkit-heading-h1 {
+  font-size: 1.25rem;
+}
+.lex-form-richtext-editor .lexkit-heading-h2 {
+  font-size: 1.1rem;
+}
+.lex-form-richtext-editor .lexkit-heading-h3 {
+  font-size: 1rem;
+}
+.lex-form-richtext-editor .lexkit-list-ul,
+.lex-form-richtext-editor .lexkit-list-ol {
+  margin: 0.35em 0;
+  padding-left: 1.35rem;
+}
+.lex-form-richtext-editor .lexkit-quote {
+  margin: 0.5em 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid color-mix(in oklch, var(--border) 70%, var(--primary));
+  color: var(--muted-foreground);
+}

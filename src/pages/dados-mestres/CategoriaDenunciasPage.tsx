@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Archive,
+  ClipboardCopy,
   Download,
   Eye,
   Hash,
   History,
   ListChecks,
   ListOrdered,
+  PencilLine,
   Plus,
   RefreshCw,
   Search,
@@ -80,6 +83,7 @@ function exportarCsvCategorias(linhas: CategoriaDenunciaMock[]) {
 
 /** Dados mestres — categorias de denúncia (listagem no padrão da tela de Denúncias). */
 export function CategoriaDenunciasPage() {
+  const navigate = useNavigate()
   const [registros] = useState<CategoriaDenunciaMock[]>(() =>
     CATEGORIA_DENUNCIAS_MOCK.map((r) => ({ ...r })),
   )
@@ -219,7 +223,7 @@ export function CategoriaDenunciasPage() {
           variant="default"
           size="sm"
           className="h-9 gap-1.5 rounded-lg px-3"
-          onClick={() => toast.message('Nova categoria (em construção).')}
+          onClick={() => navigate('/app/dados-mestres/categoria-denuncias/new?modal=true')}
         >
           <Plus className="size-3.5" strokeWidth={2} aria-hidden />
           Nova
@@ -238,7 +242,7 @@ export function CategoriaDenunciasPage() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar código, nome ou descrição…"
-              className="border-border/50 bg-background/80 h-8 w-full border pl-8 text-[13px] shadow-none"
+              className="border-border/40 bg-muted/[0.92] dark:bg-muted/95 h-8 w-full border pl-8 text-[13px] shadow-none"
               aria-label="Buscar"
             />
           </div>
@@ -498,12 +502,30 @@ export function CategoriaDenunciasPage() {
                                 'shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
                               )}
                               aria-label={`Editar ${r.codigo}`}
-                              onClick={() => toast.message(`Editar: ${r.nome} (mock).`)}
+                              onClick={() =>
+                                navigate(`/app/dados-mestres/categoria-denuncias/${r.id}?modal=true`)
+                              }
                             >
-                              <Tags className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+                              <PencilLine className="size-4 shrink-0" strokeWidth={2} aria-hidden />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent side="top">Editar</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className={cn(
+                                'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background',
+                                'shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
+                              )}
+                              aria-label={`Copiar dados de ${r.codigo}`}
+                              onClick={() => toast.message(`Copiado: ${r.codigo} (mock).`)}
+                            >
+                              <ClipboardCopy className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Copiar</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>

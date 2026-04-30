@@ -5,7 +5,7 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { XIcon } from "lucide-react"
+import { CircleX } from "lucide-react"
 
 function Dialog({
   ...props
@@ -77,13 +77,14 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
             <Button
+              type="button"
               variant="ghost"
-              className="absolute top-2 right-2"
+              className="text-muted-foreground hover:text-foreground absolute top-2 right-2"
               size="icon-sm"
+              aria-label="Fechar"
             >
-              <XIcon
-              />
-              <span className="sr-only">Close</span>
+              <CircleX className="size-4 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
+              <span className="sr-only">Fechar</span>
             </Button>
           </DialogPrimitive.Close>
         )}
@@ -122,7 +123,10 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close asChild>
-          <Button variant="outline">Close</Button>
+          <Button type="button" variant="outline" className="gap-1.5">
+            <CircleX className="size-4 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
+            Fechar
+          </Button>
         </DialogPrimitive.Close>
       )}
     </div>

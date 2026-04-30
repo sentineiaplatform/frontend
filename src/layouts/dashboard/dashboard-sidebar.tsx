@@ -51,7 +51,7 @@ type NavLeaf = {
 
 const principalLeafItems: NavLeaf[] = [
   { to: '/app/painel', label: 'Painel', tooltip: 'Painel', icon: LayoutDashboardIcon },
-  { to: '/app/denuncias', label: 'Denúncias', tooltip: 'Denúncias', icon: InboxIcon, badge: '3' },
+  { to: '/app/denuncias', label: 'Denúncias', tooltip: 'Denúncias', icon: InboxIcon },
 ]
 
 function navItemActive(pathname: string, to: string) {
@@ -88,9 +88,6 @@ export function DashboardSidebar() {
   const darkSelected =
     mounted &&
     (theme === 'dark' || (theme === 'system' && resolvedTheme === 'dark'))
-
-  const badgeMint =
-    'rounded-full border border-white/25 bg-primary/25 px-1.5 py-px text-[10px] font-semibold leading-none text-white'
 
   const configuracoesActive = pathname.startsWith('/app/configuracoes')
 
@@ -146,9 +143,11 @@ export function DashboardSidebar() {
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
-                    {item.badge === undefined ? null : (
-                      <SidebarMenuBadge className={badgeMint}>{item.badge}</SidebarMenuBadge>
-                    )}
+                    {item.badge ? (
+                      <SidebarMenuBadge className="rounded-full border border-white/25 bg-primary/25 px-1.5 py-px text-[10px] font-semibold leading-none text-white">
+                        {item.badge}
+                      </SidebarMenuBadge>
+                    ) : null}
                   </SidebarMenuItem>
                 )
               })}
