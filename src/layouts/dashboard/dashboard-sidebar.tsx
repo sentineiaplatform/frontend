@@ -37,9 +37,20 @@ import {
   SidebarSeparator,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
-import { navItemButtonClass, navSubmenuActiveClass } from '@/layouts/dashboard/dashboard-nav-shared'
+import {
+  navItemButtonClass,
+  navItemButtonFooterClass,
+  navSubmenuActiveClass,
+} from '@/layouts/dashboard/dashboard-nav-shared'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+
+/** Badge à direita no menu navy: leitura estável no hover da linha (evita texto clarinho sobre fundo claro). */
+const SIDEBAR_NAV_BADGE_CLASS =
+  'h-auto min-h-5 min-w-0 rounded-full border border-white/25 bg-white/[0.94] px-2 py-[3px] text-[10px] font-semibold uppercase leading-none tracking-wide text-slate-900 shadow-sm ring-1 ring-black/[0.06]'
+
+const SIDEBAR_NAV_BADGE_SM_CLASS =
+  'h-auto min-h-5 min-w-0 rounded-full border border-white/25 bg-white/[0.94] px-1.5 py-[3px] text-[9px] font-semibold uppercase leading-none tracking-wide text-slate-900 shadow-sm ring-1 ring-black/[0.06]'
 
 type NavLeaf = {
   to: string
@@ -61,6 +72,10 @@ function navItemActive(pathname: string, to: string) {
 /** Submenus e fundo navy: texto mais claro. */
 const subNavClass =
   'h-7 min-h-0 py-1 text-[12px] font-medium text-white/72 hover:bg-white/[0.06] hover:text-white'
+
+/** Seta dos itens pai colapsáveis: `ml-auto` encostava na borda direita do botão / da barra. */
+const parentNavChevronClass =
+  'ml-auto mr-1 size-3.5 shrink-0 text-white/45 transition-transform duration-200 group-data-[state=open]:rotate-180'
 
 const relatoriosSub = [
   { to: '/app/relatorios/visao-geral', label: 'Visão geral' },
@@ -144,9 +159,7 @@ export function DashboardSidebar() {
                       </Link>
                     </SidebarMenuButton>
                     {item.badge ? (
-                      <SidebarMenuBadge className="rounded-full border border-white/25 bg-primary/25 px-1.5 py-px text-[10px] font-semibold leading-none text-white">
-                        {item.badge}
-                      </SidebarMenuBadge>
+                      <SidebarMenuBadge className={SIDEBAR_NAV_BADGE_CLASS}>{item.badge}</SidebarMenuBadge>
                     ) : null}
                   </SidebarMenuItem>
                 )
@@ -159,18 +172,15 @@ export function DashboardSidebar() {
                       tooltip="Relatórios"
                       isActive={false}
                       type="button"
-                      className={navItemButtonClass(false)}
+                      className={cn(navItemButtonClass(false), 'pr-3.5')}
                     >
                       <FileTextIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
                       <span>Relatórios</span>
-                      <ChevronDownIcon
-                        className="ml-auto size-3.5 shrink-0 text-white/45 transition-transform duration-200 group-data-[state=open]:rotate-180"
-                        aria-hidden
-                      />
+                      <ChevronDownIcon className={parentNavChevronClass} aria-hidden />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <SidebarMenuSub className="mx-0 ml-2.5 gap-0 border-l border-white/25 pl-2.5 pr-0 py-0.5">
+                    <SidebarMenuSub className="mx-0 ml-2.5 gap-0 px-2.5 pr-1.5 py-0.5 [&_[data-sidebar=menu-sub-item]]:before:bg-white/25 [&_[data-sidebar=menu-sub-item]]:after:bg-white/25">
                       {relatoriosSub.map((sub) => {
                         const subActive = navItemActive(pathname, sub.to)
                         return (
@@ -197,7 +207,7 @@ export function DashboardSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  tooltip="Indicadores"
+                  tooltip="Insights IA"
                   isActive={navItemActive(pathname, '/app/indicadores')}
                   className={cn(
                     navItemButtonClass(navItemActive(pathname, '/app/indicadores')),
@@ -206,7 +216,7 @@ export function DashboardSidebar() {
                 >
                   <Link to="/app/indicadores">
                     <BarChart3Icon className="shrink-0" strokeWidth={1.65} aria-hidden />
-                    <span>Indicadores</span>
+                    <span>Insights IA</span>
                   </Link>
                 </SidebarMenuButton>
                 <SidebarMenuAction
@@ -233,18 +243,15 @@ export function DashboardSidebar() {
                       tooltip="Dados Mestres"
                       isActive={false}
                       type="button"
-                      className={navItemButtonClass(false)}
+                      className={cn(navItemButtonClass(false), 'pr-3.5')}
                     >
                       <DatabaseIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
                       <span>Dados Mestres</span>
-                      <ChevronDownIcon
-                        className="ml-auto size-3.5 shrink-0 text-white/45 transition-transform duration-200 group-data-[state=open]:rotate-180"
-                        aria-hidden
-                      />
+                      <ChevronDownIcon className={parentNavChevronClass} aria-hidden />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <SidebarMenuSub className="mx-0 ml-2.5 gap-0 border-l border-white/25 pl-2.5 pr-0 py-0.5">
+                    <SidebarMenuSub className="mx-0 ml-2.5 gap-0 px-2.5 pr-1.5 py-0.5 [&_[data-sidebar=menu-sub-item]]:before:bg-white/25 [&_[data-sidebar=menu-sub-item]]:after:bg-white/25">
                       {dadosMestresSub.map((sub) => {
                         const subActive = navItemActive(pathname, sub.to)
                         return (
@@ -279,10 +286,7 @@ export function DashboardSidebar() {
                   <BotIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
                   <span>Copiloto IA</span>
                 </SidebarMenuButton>
-                <SidebarMenuBadge
-                  title="Em breve"
-                  className="rounded-full border border-white/25 bg-white/15 px-1.5 py-px text-[9px] font-semibold uppercase leading-none tracking-wide text-white/90"
-                >
+                <SidebarMenuBadge title="Em breve" className={SIDEBAR_NAV_BADGE_SM_CLASS}>
                   Breve
                 </SidebarMenuBadge>
               </SidebarMenuItem>
@@ -290,19 +294,19 @@ export function DashboardSidebar() {
           </SidebarGroup>
         </div>
 
-        {/* Conta / ajuda: colado ao fundo (acima do toggle de tema) */}
-        <div className="mt-auto shrink-0 border-t border-white/10 pb-3 pt-3">
+        {/* Conta / ajuda: acima do toggle de tema — respiro do fundo da barra */}
+        <div className="mt-auto shrink-0 border-t border-white/[0.06] px-0 pb-3 pt-2">
           <SidebarGroup className="p-0">
-            <SidebarMenu className="gap-0.5">
+            <SidebarMenu className="gap-0">
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   tooltip="Recursos Pro"
                   isActive={navItemActive(pathname, '/app/recursos-pro')}
-                  className={navItemButtonClass(navItemActive(pathname, '/app/recursos-pro'))}
+                  className={navItemButtonFooterClass(navItemActive(pathname, '/app/recursos-pro'))}
                 >
                   <Link to="/app/recursos-pro">
-                    <SparklesIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
+                    <SparklesIcon className="shrink-0" strokeWidth={1.5} aria-hidden />
                     <span>Recursos Pro</span>
                   </Link>
                 </SidebarMenuButton>
@@ -312,10 +316,10 @@ export function DashboardSidebar() {
                   asChild
                   tooltip="Configurações"
                   isActive={configuracoesActive}
-                  className={navItemButtonClass(configuracoesActive)}
+                  className={navItemButtonFooterClass(configuracoesActive)}
                 >
                   <Link to="/app/configuracoes">
-                    <SettingsIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
+                    <SettingsIcon className="shrink-0" strokeWidth={1.5} aria-hidden />
                     <span>Configurações</span>
                   </Link>
                 </SidebarMenuButton>
@@ -325,10 +329,10 @@ export function DashboardSidebar() {
                   asChild
                   tooltip="Ajuda"
                   isActive={navItemActive(pathname, '/app/ajuda')}
-                  className={navItemButtonClass(navItemActive(pathname, '/app/ajuda'))}
+                  className={navItemButtonFooterClass(navItemActive(pathname, '/app/ajuda'))}
                 >
                   <Link to="/app/ajuda">
-                    <CircleHelpIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
+                    <CircleHelpIcon className="shrink-0" strokeWidth={1.5} aria-hidden />
                     <span>Ajuda</span>
                   </Link>
                 </SidebarMenuButton>
@@ -338,14 +342,14 @@ export function DashboardSidebar() {
         </div>
       </SidebarContent>
 
-      <SidebarFooter className="shrink-0 gap-0 border-t border-white/10 bg-brand-navy px-2 py-1">
+      <SidebarFooter className="shrink-0 gap-0 border-t border-white/[0.06] bg-brand-navy px-2 py-2 pb-3">
         {mounted === false ? (
-          <div className="h-7 w-full rounded-md bg-white/10" aria-hidden />
+          <div className="h-6 w-full rounded-md bg-white/[0.07]" aria-hidden />
         ) : (
           <div
             className={cn(
-              'flex rounded-md bg-white/[0.08] p-px',
-              'ring-1 ring-inset ring-white/12',
+              'flex rounded-md bg-white/[0.06] p-px',
+              'ring-1 ring-inset ring-white/[0.08]',
               'group-data-[collapsible=icon]:flex-col',
             )}
             aria-label="Tema da interface"
@@ -355,19 +359,19 @@ export function DashboardSidebar() {
               variant="ghost"
               size="sm"
               className={cn(
-                'h-7 flex-1 gap-1 rounded-[5px] px-2 text-[10px] font-medium tracking-tight',
+                'h-6 flex-1 gap-0.5 rounded-[4px] px-1.5 text-[9px] font-medium tracking-tight',
                 lightSelected
                   ? 'bg-white text-[#7c3aed] shadow-sm'
-                  : 'text-white/60 hover:bg-white/[0.06] hover:text-white',
+                  : 'text-white/55 hover:bg-white/[0.05] hover:text-white/90',
               )}
               onClick={() => setTheme('light')}
             >
               <SunIcon
                 className={cn(
-                  'size-3 shrink-0',
-                  lightSelected ? 'text-[#7c3aed]' : 'text-white/55',
+                  'size-2.5 shrink-0',
+                  lightSelected ? 'text-[#7c3aed]' : 'text-white/50',
                 )}
-                strokeWidth={1.85}
+                strokeWidth={1.75}
                 aria-hidden
               />
               <span className="group-data-[collapsible=icon]:hidden">Claro</span>
@@ -377,19 +381,19 @@ export function DashboardSidebar() {
               variant="ghost"
               size="sm"
               className={cn(
-                'h-7 flex-1 gap-1 rounded-[5px] px-2 text-[10px] font-medium tracking-tight',
+                'h-6 flex-1 gap-0.5 rounded-[4px] px-1.5 text-[9px] font-medium tracking-tight',
                 darkSelected
                   ? 'bg-white text-[#7c3aed] shadow-sm'
-                  : 'text-white/60 hover:bg-white/[0.06] hover:text-white',
+                  : 'text-white/55 hover:bg-white/[0.05] hover:text-white/90',
               )}
               onClick={() => setTheme('dark')}
             >
               <MoonIcon
                 className={cn(
-                  'size-3 shrink-0',
-                  darkSelected ? 'text-[#7c3aed]' : 'text-white/55',
+                  'size-2.5 shrink-0',
+                  darkSelected ? 'text-[#7c3aed]' : 'text-white/50',
                 )}
-                strokeWidth={1.85}
+                strokeWidth={1.75}
                 aria-hidden
               />
               <span className="group-data-[collapsible=icon]:hidden">Escuro</span>

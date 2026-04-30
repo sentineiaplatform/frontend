@@ -4,6 +4,7 @@ import {
 } from 'lucide-react'
 
 import { SentineLogo } from '@/components/brand/sentine-logo'
+import { APP_VERSION } from '@/lib/app-version'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useSessionDisplayName } from '@/hooks/use-session-display-name'
@@ -43,7 +44,7 @@ export function DashboardHeader() {
       )}
     >
       <div className="flex min-w-0 shrink-0 items-center gap-2 md:gap-3">
-        <SentineLogo tone="onDark" size="sm" className="min-w-0" />
+        <SentineLogo tone="onDark" size="sm" className="min-w-0" version={APP_VERSION} />
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">

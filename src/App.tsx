@@ -52,7 +52,7 @@ export default function App() {
             path="relatorios/agendados"
             element={<AppSectionPage title="Relatórios — Agendados" />}
           />
-          <Route path="indicadores" element={<AppSectionPage title="Indicadores" />} />
+          <Route path="indicadores" element={<AppSectionPage title="Insights IA" />} />
           <Route path="dados-mestres/status-denuncias" element={<StatusDenunciasPage />} />
           <Route path="dados-mestres/status-denuncias/new" element={<StatusDenunciaFormPage />} />
           <Route path="dados-mestres/status-denuncias/:id" element={<StatusDenunciaFormPage />} />

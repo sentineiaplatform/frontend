@@ -6,6 +6,8 @@ export type SentineLogoProps = {
   readonly tone?: Tone
   readonly size?: 'sm' | 'md' | 'lg'
   readonly className?: string
+  /** Ex.: versão do app — mostra um badge ao lado do wordmark (ex.: `v1.0.0`). */
+  readonly version?: string
 }
 
 const sizeClass = {
@@ -55,6 +57,7 @@ export function SentineLogo({
   tone = 'default',
   size = 'md',
   className,
+  version,
 }: SentineLogoProps) {
   const s = sizeClass[size]
   const word = cn(
@@ -62,10 +65,17 @@ export function SentineLogo({
     s.word,
   )
 
+  const versionLabel =
+    version && version.length > 0
+      ? version.startsWith('v')
+        ? version
+        : `v${version}`
+      : null
+
   return (
-    <div className={cn('inline-flex items-center gap-2.5 md:gap-3', className)}>
+    <div className={cn('inline-flex min-w-0 items-center gap-2.5 md:gap-3', className)}>
       <SentineMark tone={tone} className={s.mark} />
-      <span className="flex select-none items-baseline whitespace-nowrap">
+      <span className="flex min-w-0 select-none items-baseline whitespace-nowrap">
         <span
           className={cn(word, tone === 'onDark' ? 'text-white' : 'text-foreground')}
         >
@@ -73,6 +83,26 @@ export function SentineLogo({
         </span>
         <span className={cn(word, 'text-primary')}>IA</span>
       </span>
+      {versionLabel ? (
+        <span
+          className={cn(
+            'shrink-0 tabular-nums leading-none tracking-tight',
+            size === 'sm' ? 'text-[9px]' : 'text-[10px]',
+            tone === 'onDark'
+              ? cn(
+                  'rounded border border-white/[0.12] bg-white/[0.04] px-1.5 py-0.5',
+                  'font-medium text-white/45',
+                )
+              : cn(
+                  'rounded-md border border-border/80 bg-muted/60 px-1.5 py-0.5',
+                  'font-medium text-muted-foreground',
+                ),
+          )}
+          title={`Versão ${versionLabel}`}
+        >
+          {versionLabel}
+        </span>
+      ) : null}
     </div>
   )
 }

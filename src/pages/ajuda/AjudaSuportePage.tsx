@@ -115,7 +115,7 @@ const GUIAS_RAPIDOS: ReadonlyArray<{ titulo: string; passos: string[] }> = [
   {
     titulo: 'Encontrar relatórios e indicadores',
     passos: [
-      'Use **Relatórios** e **Indicadores** no menu, conforme o seu perfil.',
+      'Use **Relatórios** e **Insights IA** no menu, conforme o seu perfil.',
       'Aplique períodos e filtros sugeridos na própria tela para refinar a visualização.',
     ],
   },

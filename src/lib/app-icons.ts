@@ -207,7 +207,7 @@ export type AppIconOption = Readonly<{
 export const APP_ICON_OPTIONS: readonly AppIconOption[] = [
   { id: 'layoutDashboard', label: 'Painel', group: 'Navegação' },
   { id: 'inbox', label: 'Caixa / denúncias', group: 'Navegação' },
-  { id: 'barChart3', label: 'Indicadores', group: 'Navegação' },
+  { id: 'barChart3', label: 'Insights IA', group: 'Navegação' },
   { id: 'fileText', label: 'Relatórios', group: 'Navegação' },
   { id: 'database', label: 'Dados mestres', group: 'Navegação' },
   { id: 'settings', label: 'Configurações', group: 'Navegação' },
