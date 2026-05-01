@@ -1,15 +1,13 @@
-import { useMemo, useRef, useState } from 'react'
-import { Controller, useForm, useWatch } from 'react-hook-form'
+import { useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import {
   AlertCircleIcon,
   ChevronRightIcon,
   ChevronDownIcon,
-  ClockIcon,
   EyeIcon,
   EyeOffIcon,
-  InfoIcon,
   KeyRoundIcon,
   LockIcon,
   ShieldIcon,
@@ -34,21 +32,12 @@ import {
   InputGroupInput,
 } from '@/components/ui/input-group'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   AUTH_INPUT_GROUP_ADDON_CLASS,
   AUTH_INPUT_GROUP_CLASS,
   AUTH_INPUT_GROUP_CONTROL_CLASS,
-  AUTH_SELECT_TRIGGER_IN_GROUP_CLASS,
 } from '@/lib/auth-matched-input-group'
 import { useAuth } from '@/contexts/auth-context'
 import {
-  CONFIG_SEGURANCA_PREFS_KEY,
   SENHA_ATUAL_PADRAO,
   gravarSenhaLocal,
   lerSenhaArmazenadaLocal,
@@ -64,15 +53,9 @@ import {
 } from '@/pages/configuracoes/configuracoes-layout'
 import { appendConfigAuditLog } from '@/pages/configuracoes/configuracoes-audit-log'
 import {
-  type SegurancaPrefsValues,
   type SegurancaSenhaValues,
-  segurancaPrefsSchema,
   segurancaSenhaSchema,
 } from '@/pages/configuracoes/seguranca-schema'
-
-const defaultPrefs: SegurancaPrefsValues = {
-  lockScreenMinutes: '30',
-}
 
 const defaultSenha: SegurancaSenhaValues = {
   currentPassword: '',
@@ -80,87 +63,19 @@ const defaultSenha: SegurancaSenhaValues = {
   confirmPassword: '',
 }
 
-const lockHintByValue: Record<SegurancaPrefsValues['lockScreenMinutes'], string> = {
-  '15':
-    'Após 15 minutos sem cliques ou teclas, pediremos login de novo (quando o bloqueio estiver ligado no app).',
-  '30':
-    'Após meia hora inativo, a sessão será considerada ociosa — útil em computadores compartilhados.',
-  '60':
-    'Uma hora sem uso antes de bloquear; bom equilíbrio em estações de trabalho pessoais.',
-  '0':
-    'Sem bloqueio automático por tempo. Use quando confiar no dispositivo ou em política externa.',
-}
-
-function readPrefsInitial(): SegurancaPrefsValues {
-  try {
-    const raw = localStorage.getItem(CONFIG_SEGURANCA_PREFS_KEY)
-    if (!raw) return defaultPrefs
-    const merged = { ...defaultPrefs, ...JSON.parse(raw) } as unknown
-    const parsed = segurancaPrefsSchema.safeParse(merged)
-    return parsed.success ? parsed.data : defaultPrefs
-  } catch {
-    return defaultPrefs
-  }
-}
-
 export function ConfiguracoesSegurancaPage() {
   const { isAuthenticated } = useAuth()
-  const prefsInitial = useMemo(() => readPrefsInitial(), [])
-  const prefsBaselineRef = useRef(prefsInitial)
 
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [demoOpen, setDemoOpen] = useState(false)
 
-  const prefsForm = useForm<SegurancaPrefsValues>({
-    resolver: zodResolver(segurancaPrefsSchema),
-    defaultValues: prefsInitial,
-  })
-
-  const lockPreview = useWatch({
-    control: prefsForm.control,
-    name: 'lockScreenMinutes',
-    defaultValue: prefsInitial.lockScreenMinutes,
-  })
-
   const senhaForm = useForm<SegurancaSenhaValues>({
     resolver: zodResolver(segurancaSenhaSchema),
     defaultValues: defaultSenha,
     mode: 'onTouched',
   })
-
-  function onSubmitPrefs(values: SegurancaPrefsValues) {
-    try {
-      localStorage.setItem(CONFIG_SEGURANCA_PREFS_KEY, JSON.stringify(values))
-    } catch {
-      toast.error('Não foi possível salvar', {
-        description: 'Armazenamento local indisponível.',
-      })
-      return
-    }
-    prefsBaselineRef.current = values
-    prefsForm.reset(values)
-    toast.success('Preferências de segurança salvas', {
-      description: 'Configurações guardadas neste dispositivo.',
-    })
-    const bloqueioLabel: Record<string, string> = {
-      '15': '15 minutos',
-      '30': '30 minutos',
-      '60': '60 minutos',
-      '0': 'sem bloqueio automático',
-    }
-    appendConfigAuditLog({
-      category: 'seguranca',
-      action: 'Preferências de segurança salvas',
-      detail: `Bloqueio após inatividade: ${bloqueioLabel[values.lockScreenMinutes] ?? values.lockScreenMinutes}`,
-    })
-  }
-
-  function onCancelPrefs() {
-    prefsForm.reset(prefsBaselineRef.current)
-    toast.message('Alterações descartadas.')
-  }
 
   async function onSubmitSenha(values: SegurancaSenhaValues) {
     if (isAuthenticated) {
@@ -247,14 +162,11 @@ export function ConfiguracoesSegurancaPage() {
     toast.message('Alterações descartadas.')
   }
 
-  const { errors: prefsErrors, isDirty: prefsDirty } = prefsForm.formState
   const {
     errors: senhaErrors,
     isDirty: senhaDirty,
     isSubmitting: senhaSubmitting,
   } = senhaForm.formState
-
-  const lockHint = lockHintByValue[lockPreview] ?? lockHintByValue['30']
 
   return (
     <div className={configuracoesPageShellClass}>
@@ -267,123 +179,19 @@ export function ConfiguracoesSegurancaPage() {
             <h1 className="text-foreground font-heading text-xl font-semibold tracking-tight sm:text-2xl">
               Segurança
             </h1>
-            <span className="text-muted-foreground bg-muted/50 border-border/50 inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase sm:text-[11px]">
-              Senha na API · bloqueio local
-            </span>
+            {isAuthenticated ? (
+              <span className="text-muted-foreground bg-muted/50 border-border/50 inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase sm:text-[11px]">
+                Senha na API
+              </span>
+            ) : null}
           </div>
           <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
-            Defina quando o painel deve pedir login novamente e atualize a senha deste navegador.             A alteração de senha usa a API quando está autenticado; bloqueio por inatividade continua em preferência
-            local neste dispositivo.
+            Altere a palavra-passe da conta. Com sessão iniciada, a alteração é validada no servidor.
           </p>
         </div>
       </header>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
-        <form
-          id="form-seguranca-prefs"
-          className={cn(configuracoesSectionCardClass, 'min-h-0')}
-          onSubmit={prefsForm.handleSubmit(onSubmitPrefs)}
-          noValidate
-        >
-          <div className="mb-5 flex gap-3">
-            <div className={configuracoesSectionIconClass}>
-              <ClockIcon className="size-5" aria-hidden />
-            </div>
-            <div className="min-w-0">
-              <FieldLegend className="text-foreground font-heading !mb-0 px-0 text-base font-semibold tracking-tight">
-                Sessão e bloqueio
-              </FieldLegend>
-              <p className="text-muted-foreground mt-1 text-xs leading-snug">
-                Controle de inatividade (preferência salva aqui; o bloqueio real virá com o app).
-              </p>
-            </div>
-          </div>
-
-          <FieldSet className="min-w-0 flex-1 gap-0 border-0 p-0">
-            <FieldGroup className="gap-3">
-              <Field data-invalid={prefsErrors.lockScreenMinutes ? true : undefined}>
-                <FieldLabel htmlFor="seg-lock" className="text-sm font-medium">
-                  Bloquear após inatividade
-                </FieldLabel>
-                <FieldDescription className="text-muted-foreground !mt-1 text-xs">
-                  Quanto tempo sem uso antes de exigir nova autenticação.
-                </FieldDescription>
-                <Controller
-                  name="lockScreenMinutes"
-                  control={prefsForm.control}
-                  render={({ field }) => (
-                    <InputGroup className={cn(AUTH_INPUT_GROUP_CLASS, 'mt-2')}>
-                      <InputGroupAddon
-                        align="inline-start"
-                        className={AUTH_INPUT_GROUP_ADDON_CLASS}
-                      >
-                        <ClockIcon className="size-4 shrink-0" aria-hidden />
-                      </InputGroupAddon>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger
-                          id="seg-lock"
-                          ref={field.ref}
-                          onBlur={field.onBlur}
-                          aria-describedby="seg-lock-hint"
-                          aria-invalid={prefsErrors.lockScreenMinutes ? 'true' : undefined}
-                          className={AUTH_SELECT_TRIGGER_IN_GROUP_CLASS}
-                        >
-                          <SelectValue placeholder="Escolha o intervalo" />
-                        </SelectTrigger>
-                        <SelectContent position="popper" sideOffset={6} align="start" className="rounded-lg">
-                          <SelectItem value="15" className="rounded-md">
-                            15 minutos
-                          </SelectItem>
-                          <SelectItem value="30" className="rounded-md">
-                            30 minutos
-                          </SelectItem>
-                          <SelectItem value="60" className="rounded-md">
-                            60 minutos
-                          </SelectItem>
-                          <SelectItem value="0" className="rounded-md">
-                            Não bloquear automaticamente
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </InputGroup>
-                  )}
-                />
-                {prefsErrors.lockScreenMinutes ? (
-                  <FieldError className="mt-2 flex items-start gap-2 [&>svg]:shrink-0">
-                    <AlertCircleIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
-                    <span>{prefsErrors.lockScreenMinutes.message}</span>
-                  </FieldError>
-                ) : null}
-                <p
-                  id="seg-lock-hint"
-                  className="text-muted-foreground mt-3 flex gap-2 rounded-lg bg-muted/30 px-3 py-2 text-xs leading-relaxed"
-                >
-                  <InfoIcon className="text-muted-foreground mt-0.5 size-3.5 shrink-0 opacity-80" aria-hidden />
-                  <span>{lockHint}</span>
-                </p>
-              </Field>
-            </FieldGroup>
-          </FieldSet>
-
-          <div className="border-border/40 mt-6 flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground h-9 gap-1.5 text-xs"
-              onClick={onCancelPrefs}
-              disabled={!prefsDirty}
-            >
-              <XIcon className="size-3.5 shrink-0 opacity-90" aria-hidden />
-              Cancelar
-            </Button>
-            <Button type="submit" size="sm" className="h-9 gap-1.5 px-4 font-medium sm:min-w-[132px]">
-              <span>Salvar preferências</span>
-              <ChevronRightIcon className="size-3.5 opacity-90" aria-hidden />
-            </Button>
-          </div>
-        </form>
-
+      <div className="mt-6 max-w-xl">
         <form
           id="form-seguranca-senha"
           className={cn(configuracoesSectionCardClass, 'min-h-0')}

@@ -2,8 +2,6 @@
 export const SENHA_LOCAL_STORAGE_KEY = 'sentineia:senhaLocalDemo'
 export const SENHA_ATUAL_PADRAO = 'senha1234'
 
-export const CONFIG_SEGURANCA_PREFS_KEY = 'sentineia:configSeguranca'
-
 export function lerSenhaArmazenadaLocal(): string {
   try {
     return localStorage.getItem(SENHA_LOCAL_STORAGE_KEY) ?? SENHA_ATUAL_PADRAO

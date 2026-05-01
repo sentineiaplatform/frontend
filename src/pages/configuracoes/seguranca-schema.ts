@@ -1,12 +1,5 @@
 import { z } from 'zod'
 
-/** Preferências de segurança salvas localmente (pré-backend). */
-export const segurancaPrefsSchema = z.object({
-  lockScreenMinutes: z.enum(['15', '30', '60', '0']),
-})
-
-export type SegurancaPrefsValues = z.infer<typeof segurancaPrefsSchema>
-
 export const segurancaSenhaSchema = z
   .object({
     currentPassword: z.string().min(1, 'Informe a senha atual.'),
