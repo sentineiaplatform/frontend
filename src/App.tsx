@@ -6,7 +6,7 @@ import { RequireAuth } from '@/components/auth/require-auth'
 import { RedirectIfAuthenticated } from '@/components/auth/redirect-if-authenticated'
 import { DashboardLayout } from '@/layouts/dashboard/dashboard-layout'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPassword'
-import { ResetPasswordPlaceholderPage } from '@/pages/auth/ResetPasswordPlaceholder'
+import { ResetPasswordPage } from '@/pages/auth/ResetPassword'
 import { LoginPage } from '@/pages/auth/Login'
 import { RegisterPage } from '@/pages/auth/Register'
 import { AppSectionPage } from '@/pages/app/AppSectionPage'
@@ -51,7 +51,7 @@ export default function App() {
           />
           <Route path="/cadastro" element={<RegisterPage />} />
           <Route path="/recuperar-senha" element={<ForgotPasswordPage />} />
-          <Route path="/redefinir-senha" element={<ResetPasswordPlaceholderPage />} />
+          <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
           <Route path="/dashboard" element={<Navigate to="/app/painel" replace />} />
 
           <Route element={<RequireAuth />}>
