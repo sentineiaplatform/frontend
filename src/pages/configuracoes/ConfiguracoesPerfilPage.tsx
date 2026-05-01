@@ -70,7 +70,6 @@ import {
   configuracoesSectionCardClass,
   configuracoesSectionIconClass,
 } from '@/pages/configuracoes/configuracoes-layout'
-import { appendConfigAuditLog } from '@/pages/configuracoes/configuracoes-audit-log'
 import {
   type PerfilFormValues,
   perfilFormSchema,
@@ -290,11 +289,6 @@ export function ConfiguracoesPerfilPage() {
       })
       toast.success('Perfil atualizado', {
         description: 'As alterações foram guardadas.',
-      })
-      appendConfigAuditLog({
-        category: 'perfil',
-        action: 'Conta atualizada',
-        detail: nome || undefined,
       })
     } catch (e) {
       if (e instanceof AuthRequestError && e.status === 401) {

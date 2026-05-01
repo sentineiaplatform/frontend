@@ -43,7 +43,6 @@ import {
   loadMatrizSalva,
   saveMatrizSalva,
 } from '@/pages/configuracoes/config-permissoes-matriz'
-import { appendConfigAuditLog } from '@/pages/configuracoes/configuracoes-audit-log'
 import { configuracoesPageShellClass } from '@/pages/configuracoes/configuracoes-layout'
 import {
   MODULOS,
@@ -169,11 +168,6 @@ export function ConfiguracoesPermissoesPage() {
     [perfis],
   )
 
-  const baseline = useMemo(
-    () => buildBaselineMatriz(ids, perfilNomePorId),
-    [ids, perfilNomePorId],
-  )
-
   const [matriz, setMatriz] = useState<MatrizPermissoes>({})
 
   useEffect(() => {
@@ -280,21 +274,8 @@ export function ConfiguracoesPermissoesPage() {
   function onGuardar() {
     saveMatrizSalva(matriz)
     const total = contarPermissoesAtivas(matriz, ids)
-    const mudancas: string[] = []
-    for (const k of iterKeys()) {
-      for (const pid of ids) {
-        const was = baseline[k]?.[pid] ?? false
-        const now = matriz[k]?.[pid] ?? false
-        if (was !== now) mudancas.push(`${k}:${pid}=${now}`)
-      }
-    }
     toast.success('Matriz guardada', {
       description: `${total} permissões ativas · ${perfis.length} perfil(is) · ${iterKeys().length} linhas.`,
-    })
-    appendConfigAuditLog({
-      category: 'permissoes',
-      action: 'Matriz módulos × CRUD × perfis',
-      detail: mudancas.length ? mudancas.slice(0, 32).join('; ') : 'Sem alterações face ao modelo inicial',
     })
   }
 

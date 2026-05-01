@@ -51,7 +51,6 @@ import {
   configuracoesSectionCardClass,
   configuracoesSectionIconClass,
 } from '@/pages/configuracoes/configuracoes-layout'
-import { appendConfigAuditLog } from '@/pages/configuracoes/configuracoes-audit-log'
 import {
   type SegurancaSenhaValues,
   segurancaSenhaSchema,
@@ -90,10 +89,6 @@ export function ConfiguracoesSegurancaPage() {
         setShowConfirm(false)
         toast.success('Senha atualizada', {
           description: 'A nova senha já está ativa na sua conta.',
-        })
-        appendConfigAuditLog({
-          category: 'seguranca',
-          action: 'Senha atualizada',
         })
       } catch (e) {
         if (e instanceof AuthRequestError && e.status === 401) {
@@ -147,10 +142,6 @@ export function ConfiguracoesSegurancaPage() {
     setShowConfirm(false)
     toast.success('Senha atualizada', {
       description: 'Nova senha salva neste navegador (pré-backend).',
-    })
-    appendConfigAuditLog({
-      category: 'seguranca',
-      action: 'Senha atualizada',
     })
   }
 

@@ -56,7 +56,6 @@ import {
   configuracoesSectionCardClass,
   configuracoesSectionIconClass,
 } from '@/pages/configuracoes/configuracoes-layout'
-import { appendConfigAuditLog } from '@/pages/configuracoes/configuracoes-audit-log'
 import {
   type GeralFormValues,
   geralFormSchema,
@@ -123,13 +122,6 @@ export function ConfiguracoesGeralPage() {
     applyUiZoomPercent(Number(payload.uiZoom) as UiZoomPercent)
     toast.success('Configurações salvas', {
       description: 'Preferências guardadas neste dispositivo.',
-    })
-    appendConfigAuditLog({
-      category: 'geral',
-      action: 'Configurações gerais salvas',
-      detail: payload.organizationName
-        ? `Organização: ${payload.organizationName}`
-        : undefined,
     })
   }
 

@@ -5,7 +5,6 @@ import {
   Building2Icon,
   CircleUserRoundIcon,
   ClipboardCopyIcon,
-  HardDriveIcon,
   KeyRoundIcon,
   ListFilterIcon,
   Loader2Icon,
@@ -15,24 +14,12 @@ import {
   ScrollTextIcon,
   SearchIcon,
   ShieldIcon,
-  Trash2Icon,
   UserIcon,
   UsersIcon,
   XIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { FieldLegend } from '@/components/ui/field'
@@ -67,12 +54,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { fetchAllAuditLogsMapped } from '@/services/audit-log-service'
 
-import {
-  clearConfigAuditLog,
-  type ConfigAuditLogEntry,
-  CONFIG_AUDIT_LOG_STORAGE_KEY,
-  readConfigAuditLog,
-} from '@/pages/configuracoes/configuracoes-audit-log'
+import type { ConfigAuditLogEntry } from '@/pages/configuracoes/configuracoes-audit-log'
 import {
   configuracoesPageShellClass,
   configuracoesSectionCardClass,
@@ -194,19 +176,26 @@ function LogEventMobileCard({ row }: LogRowProps) {
   )
 }
 
-/** Histórico: eventos do servidor (`GET /api/audit/logs`) + localStorage. */
+/** Histórico: apenas eventos do servidor (`GET /api/audit/logs`). */
 export function ConfiguracoesLogsPage() {
   const { isAuthenticated } = useAuth()
-  const [listVersion, setListVersion] = useState(0)
   const [apiRefresh, setApiRefresh] = useState(0)
   const [apiEntries, setApiEntries] = useState<ConfigAuditLogEntry[]>([])
   const [apiLoading, setApiLoading] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
 
-  const storedEntries = useMemo(() => readConfigAuditLog(), [listVersion])
   const [query, setQuery] = useState('')
   const [pagina, setPagina] = useState(1)
   const [itensPorPagina, setItensPorPagina] = useState(20)
+
+  /** Remove dados antigos de auditoria local (deixou de ser usado). */
+  useEffect(() => {
+    try {
+      localStorage.removeItem('sentineia:configAuditLog')
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -233,21 +222,15 @@ export function ConfiguracoesLogsPage() {
     }
   }, [isAuthenticated, apiRefresh])
 
-  const allEntries = useMemo(() => {
-    const merged = [...apiEntries, ...storedEntries]
-    return merged.sort((a, b) => b.at.localeCompare(a.at))
-  }, [apiEntries, storedEntries])
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return allEntries
-    return allEntries.filter((e) => {
-      const apiTag = e.source === 'api' ? 'servidor api' : ''
+    if (!q) return apiEntries
+    return apiEntries.filter((e) => {
       const hay =
-        `${e.action} ${e.detail ?? ''} ${e.actorEmail ?? ''} ${categoriaLabel[e.category]} ${apiTag}`.toLowerCase()
+        `${e.action} ${e.detail ?? ''} ${e.actorEmail ?? ''} ${categoriaLabel[e.category]} servidor`.toLowerCase()
       return hay.includes(q)
     })
-  }, [allEntries, query])
+  }, [apiEntries, query])
 
   const filtersActive = query.trim() !== ''
 
@@ -277,26 +260,13 @@ export function ConfiguracoesLogsPage() {
 
   async function onCopyJson() {
     try {
-      const payload = [...apiEntries, ...storedEntries]
-      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+      await navigator.clipboard.writeText(JSON.stringify(apiEntries, null, 2))
       toast.success('Copiado', {
-        description: 'Eventos do servidor e deste dispositivo.',
+        description: 'Registos devolvidos pela API.',
       })
     } catch {
       toast.error('Não foi possível copiar')
     }
-  }
-
-  function onClearConfirmed() {
-    if (!clearConfigAuditLog()) {
-      toast.error('Não foi possível limpar', {
-        description: 'Armazenamento local indisponível.',
-      })
-      return
-    }
-    setListVersion((v) => v + 1)
-    setQuery('')
-    toast.message('Histórico limpo neste dispositivo.')
   }
 
   return (
@@ -312,12 +282,13 @@ export function ConfiguracoesLogsPage() {
                 Logs
               </h1>
               <span className="text-muted-foreground bg-muted/50 border-border/50 inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase sm:text-[11px]">
-                Servidor + local
+                Servidor
               </span>
             </div>
             <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
-              Eventos registados na API (<strong className="font-medium text-foreground">GET /api/audit/logs</strong>)
-              quando está autenticado, mais histórico opcional neste navegador.
+              Lista apenas o que a API expõe em{' '}
+              <strong className="font-medium text-foreground">GET /api/audit/logs</strong> — sem cópia local no
+              navegador.
             </p>
           </div>
         </header>
@@ -340,27 +311,16 @@ export function ConfiguracoesLogsPage() {
           </Alert>
         ) : null}
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-3 sm:gap-4">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 sm:gap-4">
           <div className="border-border/60 bg-background group relative flex min-h-[4.75rem] flex-col justify-center overflow-hidden rounded-xl border px-4 py-3 transition-shadow hover:shadow-sm sm:py-4">
             <div className="text-primary/25 pointer-events-none absolute -right-2 -bottom-3">
               <ScrollTextIcon className="size-16 stroke-[1]" aria-hidden />
             </div>
             <p className="text-muted-foreground relative text-[11px] font-medium tracking-wide uppercase">
-              No servidor
+              Eventos na API
             </p>
             <p className="text-foreground relative flex items-center gap-2 font-heading text-2xl font-semibold tabular-nums">
               {apiLoading ? <Loader2Icon className="text-primary size-7 animate-spin" aria-hidden /> : apiEntries.length}
-            </p>
-          </div>
-          <div className="border-border/60 bg-background group relative flex min-h-[4.75rem] flex-col justify-center overflow-hidden rounded-xl border px-4 py-3 transition-shadow hover:shadow-sm sm:py-4">
-            <div className="text-primary/25 pointer-events-none absolute -right-2 -bottom-3">
-              <HardDriveIcon className="size-16 stroke-[1]" aria-hidden />
-            </div>
-            <p className="text-muted-foreground relative text-[11px] font-medium tracking-wide uppercase">
-              Neste dispositivo
-            </p>
-            <p className="text-foreground relative font-heading text-2xl font-semibold tabular-nums">
-              {storedEntries.length}
             </p>
           </div>
           <div className="border-border/60 bg-background group relative flex min-h-[4.75rem] flex-col justify-center overflow-hidden rounded-xl border px-4 py-3 transition-shadow hover:shadow-sm sm:py-4">
@@ -374,7 +334,7 @@ export function ConfiguracoesLogsPage() {
               {filtered.length}
               {filtersActive ? (
                 <span className="text-muted-foreground ml-1 text-sm font-normal">
-                  de {allEntries.length}
+                  de {apiEntries.length}
                 </span>
               ) : null}
             </p>
@@ -393,10 +353,7 @@ export function ConfiguracoesLogsPage() {
                     Registro de eventos
                   </FieldLegend>
                   <p className="text-muted-foreground mt-1 text-xs leading-snug">
-                    Chave no navegador:{' '}
-                    <code className="text-foreground/80 text-[11px] break-all">
-                      {CONFIG_AUDIT_LOG_STORAGE_KEY}
-                    </code>
+                    Carregado da API ao estar autenticado; não é guardado em localStorage.
                   </p>
                 </div>
               </div>
@@ -410,7 +367,7 @@ export function ConfiguracoesLogsPage() {
                         size="sm"
                         className="h-9 gap-1.5"
                         onClick={() => onCopyJson()}
-                        disabled={apiEntries.length + storedEntries.length === 0}
+                        disabled={apiEntries.length === 0}
                       >
                         <ClipboardCopyIcon className="size-3.5 opacity-90" aria-hidden />
                         Copiar JSON
@@ -418,7 +375,7 @@ export function ConfiguracoesLogsPage() {
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" sideOffset={6}>
-                    Exporta eventos do servidor e deste dispositivo.
+                    Exporta o JSON atualmente carregado da API.
                   </TooltipContent>
                 </Tooltip>
                 {isAuthenticated ? (
@@ -443,47 +400,6 @@ export function ConfiguracoesLogsPage() {
                     </TooltipContent>
                   </Tooltip>
                 ) : null}
-                <AlertDialog>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex">
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive border-destructive/30 hover:bg-destructive/10 h-9 gap-1.5"
-                            disabled={storedEntries.length === 0}
-                          >
-                            <Trash2Icon className="size-3.5 opacity-90" aria-hidden />
-                            Limpar
-                          </Button>
-                        </AlertDialogTrigger>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={6}>
-                      Apaga o histórico salvo neste navegador.
-                    </TooltipContent>
-                  </Tooltip>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Limpar histórico local?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Esta ação remove apenas os eventos guardados localmente neste navegador. Não pode ser
-                        desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        onClick={onClearConfirmed}
-                      >
-                        Limpar
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
               </div>
             </div>
 
@@ -547,15 +463,32 @@ export function ConfiguracoesLogsPage() {
             {filtered.length === 0 ? (
               <div className="border-border/50 text-muted-foreground flex flex-col items-center gap-3 rounded-xl border border-dashed px-4 py-12 text-center text-sm">
                 <AlertTriangleIcon className="size-10 text-amber-500/85" aria-hidden />
-                <p className="text-foreground max-w-sm font-medium">Nada corresponde à busca</p>
-                <p className="max-w-md text-xs leading-relaxed">
-                  Tente outros termos ou limpe o campo para ver todos os eventos.
-                </p>
-                {filtersActive ? (
-                  <Button type="button" variant="outline" size="sm" className="mt-1" onClick={() => setQuery('')}>
-                    Limpar busca
-                  </Button>
-                ) : null}
+                {!isAuthenticated ? (
+                  <>
+                    <p className="text-foreground max-w-sm font-medium">Inicie sessão para ver os registos</p>
+                    <p className="max-w-md text-xs leading-relaxed">
+                      Os eventos de auditoria são obtidos da API após autenticação.
+                    </p>
+                  </>
+                ) : filtersActive ? (
+                  <>
+                    <p className="text-foreground max-w-sm font-medium">Nada corresponde à busca</p>
+                    <p className="max-w-md text-xs leading-relaxed">
+                      Tente outros termos ou limpe o campo para ver todos os eventos.
+                    </p>
+                    <Button type="button" variant="outline" size="sm" className="mt-1" onClick={() => setQuery('')}>
+                      Limpar busca
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-foreground max-w-sm font-medium">Nenhum evento na API</p>
+                    <p className="max-w-md text-xs leading-relaxed">
+                      Ainda não há registos ou o servidor devolveu uma lista vazia. Use &quot;Atualizar API&quot; para
+                      recarregar.
+                    </p>
+                  </>
+                )}
               </div>
             ) : (
               <RegistrosListaPaginada
