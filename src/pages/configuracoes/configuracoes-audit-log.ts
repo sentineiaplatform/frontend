@@ -16,9 +16,12 @@ const entrySchema = z.object({
     'permissoes',
     'integracao',
     'notificacoes',
+    'auth',
   ]),
   action: z.string(),
   detail: z.string().optional(),
+  actorEmail: z.string().optional(),
+  source: z.enum(['api', 'local']).optional(),
 })
 
 export type ConfigAuditLogEntry = z.infer<typeof entrySchema>
@@ -61,6 +64,7 @@ export function appendConfigAuditLog(
     const next: ConfigAuditLogEntry = {
       id: newId(),
       at: new Date().toISOString(),
+      source: 'local',
       ...partial,
     }
     const merged = [next, ...readRaw()].slice(0, MAX_ENTRIES)

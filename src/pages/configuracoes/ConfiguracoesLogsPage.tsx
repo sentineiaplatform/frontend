@@ -5,11 +5,13 @@ import {
   Building2Icon,
   CircleUserRoundIcon,
   ClipboardCopyIcon,
-  FlaskConicalIcon,
   HardDriveIcon,
   KeyRoundIcon,
   ListFilterIcon,
+  Loader2Icon,
+  LogInIcon,
   PlugIcon,
+  RefreshCwIcon,
   ScrollTextIcon,
   SearchIcon,
   ShieldIcon,
@@ -31,6 +33,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { FieldLegend } from '@/components/ui/field'
 import {
@@ -61,11 +64,9 @@ import {
   AUTH_INPUT_GROUP_CONTROL_CLASS,
 } from '@/lib/auth-matched-input-group'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/contexts/auth-context'
+import { fetchAllAuditLogsMapped } from '@/services/audit-log-service'
 
-import {
-  getMockConfigAuditLogEntries,
-  isMockAuditEntry,
-} from '@/pages/configuracoes/configuracoes-audit-log-mock'
 import {
   clearConfigAuditLog,
   type ConfigAuditLogEntry,
@@ -89,6 +90,7 @@ const categoriaLabel: Record<ConfigAuditLogEntry['category'], string> = {
   permissoes: 'Permissões',
   integracao: 'Integração',
   notificacoes: 'Notificações',
+  auth: 'Sessão',
 }
 
 const categoryIcon: Record<
@@ -103,6 +105,7 @@ const categoryIcon: Record<
   permissoes: KeyRoundIcon,
   integracao: PlugIcon,
   notificacoes: BellIcon,
+  auth: LogInIcon,
 }
 
 function formatWhen(iso: string): string {
@@ -138,25 +141,18 @@ type LogRowProps = {
 }
 
 function LogEventMobileCard({ row }: LogRowProps) {
-  const mock = isMockAuditEntry(row.id)
+  const fromApi = row.source === 'api'
   const CatIcon = categoryIcon[row.category]
 
   const origin = (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span
-        className={cn(
-          'inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium',
-          mock
-            ? 'border-amber-500/35 bg-amber-500/10 text-amber-900 dark:text-amber-100'
-            : 'bg-primary/8 text-primary border-primary/15',
-        )}
-      >
+      <span className="bg-primary/8 text-primary border-primary/15 inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium">
         <CatIcon className="size-3.5 shrink-0 opacity-90" aria-hidden />
         {categoriaLabel[row.category]}
       </span>
-      {mock ? (
-        <span className="text-amber-800 dark:text-amber-200/90 bg-amber-500/15 border-amber-500/25 rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
-          Exemplo
+      {fromApi ? (
+        <span className="border-primary/25 bg-primary/10 text-primary rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
+          Servidor
         </span>
       ) : null}
     </div>
@@ -181,7 +177,7 @@ function LogEventMobileCard({ row }: LogRowProps) {
     <article
       className={cn(
         'border-border/60 bg-background rounded-xl border p-4 shadow-sm',
-        mock && 'border-l-amber-500/60 border-l-[3px] bg-amber-500/[0.04]',
+        fromApi && 'border-l-primary/35 border-l-[3px]',
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -198,26 +194,57 @@ function LogEventMobileCard({ row }: LogRowProps) {
   )
 }
 
-/** Histórico local de alterações em Configurações (até existir API de auditoria). */
+/** Histórico: eventos do servidor (`GET /api/audit/logs`) + localStorage. */
 export function ConfiguracoesLogsPage() {
+  const { isAuthenticated } = useAuth()
   const [listVersion, setListVersion] = useState(0)
+  const [apiRefresh, setApiRefresh] = useState(0)
+  const [apiEntries, setApiEntries] = useState<ConfigAuditLogEntry[]>([])
+  const [apiLoading, setApiLoading] = useState(false)
+  const [apiError, setApiError] = useState<string | null>(null)
+
   const storedEntries = useMemo(() => readConfigAuditLog(), [listVersion])
-  const mockEntries = useMemo(() => getMockConfigAuditLogEntries(), [])
   const [query, setQuery] = useState('')
   const [pagina, setPagina] = useState(1)
   const [itensPorPagina, setItensPorPagina] = useState(20)
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setApiEntries([])
+      setApiError(null)
+      setApiLoading(false)
+      return
+    }
+    let cancelled = false
+    setApiLoading(true)
+    setApiError(null)
+    void (async () => {
+      try {
+        const rows = await fetchAllAuditLogsMapped()
+        if (!cancelled) setApiEntries(rows)
+      } catch {
+        if (!cancelled) setApiError('Não foi possível carregar os logs do servidor.')
+      } finally {
+        if (!cancelled) setApiLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthenticated, apiRefresh])
+
   const allEntries = useMemo(() => {
-    const merged = [...storedEntries, ...mockEntries]
+    const merged = [...apiEntries, ...storedEntries]
     return merged.sort((a, b) => b.at.localeCompare(a.at))
-  }, [storedEntries, mockEntries])
+  }, [apiEntries, storedEntries])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return allEntries
     return allEntries.filter((e) => {
-      const mockTag = isMockAuditEntry(e.id) ? 'exemplo demonstração' : ''
-      const hay = `${e.action} ${e.detail ?? ''} ${categoriaLabel[e.category]} ${mockTag}`.toLowerCase()
+      const apiTag = e.source === 'api' ? 'servidor api' : ''
+      const hay =
+        `${e.action} ${e.detail ?? ''} ${e.actorEmail ?? ''} ${categoriaLabel[e.category]} ${apiTag}`.toLowerCase()
       return hay.includes(q)
     })
   }, [allEntries, query])
@@ -250,9 +277,10 @@ export function ConfiguracoesLogsPage() {
 
   async function onCopyJson() {
     try {
-      await navigator.clipboard.writeText(JSON.stringify(storedEntries, null, 2))
+      const payload = [...apiEntries, ...storedEntries]
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
       toast.success('Copiado', {
-        description: 'Apenas eventos salvos neste dispositivo (sem exemplos).',
+        description: 'Eventos do servidor e deste dispositivo.',
       })
     } catch {
       toast.error('Não foi possível copiar')
@@ -284,13 +312,12 @@ export function ConfiguracoesLogsPage() {
                 Logs
               </h1>
               <span className="text-muted-foreground bg-muted/50 border-border/50 inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase sm:text-[11px]">
-                Armazenamento local
+                Servidor + local
               </span>
             </div>
             <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
-              Linha do tempo das alterações salvas em Configurações neste navegador, com linhas de
-              exemplo para referência visual. Em produção, a organização poderá integrar auditoria
-              pela API.
+              Eventos registados na API (<strong className="font-medium text-foreground">GET /api/audit/logs</strong>)
+              quando está autenticado, mais histórico opcional neste navegador.
             </p>
           </div>
         </header>
@@ -301,7 +328,30 @@ export function ConfiguracoesLogsPage() {
             : `${filtered.length} evento${filtered.length !== 1 ? 's' : ''} na lista.`}
         </p>
 
+        {isAuthenticated && apiError ? (
+          <Alert variant="destructive" className="mt-4">
+            <AlertTitle>Logs do servidor</AlertTitle>
+            <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <span>{apiError}</span>
+              <Button type="button" size="sm" variant="secondary" className="shrink-0 self-start sm:self-auto" onClick={() => setApiRefresh((n) => n + 1)}>
+                Tentar novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         <div className="mt-6 grid gap-3 sm:grid-cols-3 sm:gap-4">
+          <div className="border-border/60 bg-background group relative flex min-h-[4.75rem] flex-col justify-center overflow-hidden rounded-xl border px-4 py-3 transition-shadow hover:shadow-sm sm:py-4">
+            <div className="text-primary/25 pointer-events-none absolute -right-2 -bottom-3">
+              <ScrollTextIcon className="size-16 stroke-[1]" aria-hidden />
+            </div>
+            <p className="text-muted-foreground relative text-[11px] font-medium tracking-wide uppercase">
+              No servidor
+            </p>
+            <p className="text-foreground relative flex items-center gap-2 font-heading text-2xl font-semibold tabular-nums">
+              {apiLoading ? <Loader2Icon className="text-primary size-7 animate-spin" aria-hidden /> : apiEntries.length}
+            </p>
+          </div>
           <div className="border-border/60 bg-background group relative flex min-h-[4.75rem] flex-col justify-center overflow-hidden rounded-xl border px-4 py-3 transition-shadow hover:shadow-sm sm:py-4">
             <div className="text-primary/25 pointer-events-none absolute -right-2 -bottom-3">
               <HardDriveIcon className="size-16 stroke-[1]" aria-hidden />
@@ -311,17 +361,6 @@ export function ConfiguracoesLogsPage() {
             </p>
             <p className="text-foreground relative font-heading text-2xl font-semibold tabular-nums">
               {storedEntries.length}
-            </p>
-          </div>
-          <div className="border-border/60 bg-background group relative flex min-h-[4.75rem] flex-col justify-center overflow-hidden rounded-xl border px-4 py-3 transition-shadow hover:shadow-sm sm:py-4">
-            <div className="text-amber-500/20 pointer-events-none absolute -right-2 -bottom-3">
-              <FlaskConicalIcon className="size-16 stroke-[1]" aria-hidden />
-            </div>
-            <p className="text-muted-foreground relative text-[11px] font-medium tracking-wide uppercase">
-              Exemplos ativos
-            </p>
-            <p className="text-foreground relative font-heading text-2xl font-semibold tabular-nums">
-              {mockEntries.length}
             </p>
           </div>
           <div className="border-border/60 bg-background group relative flex min-h-[4.75rem] flex-col justify-center overflow-hidden rounded-xl border px-4 py-3 transition-shadow hover:shadow-sm sm:py-4">
@@ -371,7 +410,7 @@ export function ConfiguracoesLogsPage() {
                         size="sm"
                         className="h-9 gap-1.5"
                         onClick={() => onCopyJson()}
-                        disabled={storedEntries.length === 0}
+                        disabled={apiEntries.length + storedEntries.length === 0}
                       >
                         <ClipboardCopyIcon className="size-3.5 opacity-90" aria-hidden />
                         Copiar JSON
@@ -379,9 +418,31 @@ export function ConfiguracoesLogsPage() {
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" sideOffset={6}>
-                    Exporta só eventos reais (sem linhas de exemplo).
+                    Exporta eventos do servidor e deste dispositivo.
                   </TooltipContent>
                 </Tooltip>
+                {isAuthenticated ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-9 gap-1.5"
+                          disabled={apiLoading}
+                          onClick={() => setApiRefresh((n) => n + 1)}
+                        >
+                          <RefreshCwIcon className={cn('size-3.5 opacity-90', apiLoading && 'animate-spin')} aria-hidden />
+                          Atualizar API
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={6}>
+                      Recarrega os eventos de <code className="text-[11px]">GET /api/audit/logs</code>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null}
                 <AlertDialog>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -401,15 +462,15 @@ export function ConfiguracoesLogsPage() {
                       </span>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={6}>
-                      Apaga o histórico salvo localmente. Exemplos não são removidos.
+                      Apaga o histórico salvo neste navegador.
                     </TooltipContent>
                   </Tooltip>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Limpar histórico local?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Esta ação remove apenas os eventos reais guardados neste dispositivo. As linhas
-                        de exemplo na lista não são removidas. Não pode ser desfeita.
+                        Esta ação remove apenas os eventos guardados localmente neste navegador. Não pode ser
+                        desfeita.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -444,7 +505,7 @@ export function ConfiguracoesLogsPage() {
                     <InputGroupInput
                       id="logs-search"
                       className={AUTH_INPUT_GROUP_CONTROL_CLASS}
-                      placeholder="Ação, detalhe, origem ou “exemplo”…"
+                      placeholder="Ação, detalhe ou origem…"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       aria-label="Buscar nos eventos"
@@ -550,14 +611,14 @@ export function ConfiguracoesLogsPage() {
                       </TableHeader>
                       <TableBody>
                         {paginatedRows.map((row) => {
-                          const mock = isMockAuditEntry(row.id)
+                          const fromApi = row.source === 'api'
                           const CatIcon = categoryIcon[row.category]
                           return (
                             <TableRow
                               key={row.id}
                               className={cn(
                                 'border-border/50',
-                                mock && 'border-l-amber-500/55 bg-amber-500/[0.06] border-l-2',
+                                fromApi && 'border-l-primary/40 border-l-2',
                               )}
                             >
                               <TableCell className="px-3 py-2.5 align-top whitespace-normal sm:px-4">
@@ -574,20 +635,13 @@ export function ConfiguracoesLogsPage() {
                               </TableCell>
                               <TableCell className="px-3 py-2.5 align-top whitespace-normal sm:px-4">
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <span
-                                    className={cn(
-                                      'inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium',
-                                      mock
-                                        ? 'border-amber-500/35 bg-amber-500/10 text-amber-900 dark:text-amber-100'
-                                        : 'bg-primary/8 text-primary border-primary/15',
-                                    )}
-                                  >
+                                  <span className="bg-primary/8 text-primary border-primary/15 inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium">
                                     <CatIcon className="size-3.5 shrink-0 opacity-90" aria-hidden />
                                     {categoriaLabel[row.category]}
                                   </span>
-                                  {mock ? (
-                                    <span className="text-amber-800 dark:text-amber-200/90 bg-amber-500/15 border-amber-500/25 rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
-                                      Exemplo
+                                  {fromApi ? (
+                                    <span className="border-primary/25 bg-primary/10 text-primary rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
+                                      Servidor
                                     </span>
                                   ) : null}
                                 </div>
