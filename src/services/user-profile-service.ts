@@ -6,13 +6,20 @@ export type UserProfileDto = {
   id: string
   name: string
   email: string
+  perfilId: string
+  perfilName: string
 }
 
-/** Item de `GET /api/users` (entidade `User` + `BaseEntity`; sem palavra-passe na resposta JSON). */
+/** Item de `GET /api/users` (entidade `User` + `perfil`; sem palavra-passe na resposta JSON). */
 export type UserListItemDto = {
   id: string
   name: string
   email: string
+  perfil?: {
+    id: string
+    name: string
+    description?: string | null
+  }
   createdAt?: string
   updatedAt?: string
 }
@@ -73,9 +80,10 @@ export type CreateUserBody = {
   name: string
   email: string
   password: string
+  perfilId: string
 }
 
-/** `POST /api/users` — registo / criação de conta (resposta sem palavra-passe). */
+/** `POST /api/users` — criação de conta (resposta sem palavra-passe). */
 export async function createUser(body: CreateUserBody): Promise<UserListItemDto> {
   let res: Response
   try {
@@ -89,6 +97,7 @@ export async function createUser(body: CreateUserBody): Promise<UserListItemDto>
         name: body.name.trim(),
         email: body.email.trim().toLowerCase(),
         password: body.password,
+        perfilId: body.perfilId,
       }),
     })
   } catch {
@@ -103,6 +112,7 @@ export async function createUser(body: CreateUserBody): Promise<UserListItemDto>
 export async function patchCurrentUserProfile(body: {
   name: string
   email: string
+  perfilId: string
 }): Promise<UserProfileUpdateDto> {
   let res: Response
   try {
@@ -115,6 +125,7 @@ export async function patchCurrentUserProfile(body: {
       body: JSON.stringify({
         name: body.name.trim(),
         email: body.email.trim().toLowerCase(),
+        perfilId: body.perfilId,
       }),
     })
   } catch {

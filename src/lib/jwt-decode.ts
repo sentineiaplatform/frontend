@@ -30,6 +30,22 @@ export function jwtNameFromToken(token: string): string | null {
   return typeof name === 'string' && name.trim().length > 0 ? name.trim() : null
 }
 
+/** UUID do perfil organizacional (`perfilId` no JWT). */
+export function jwtPerfilIdFromToken(token: string): string | null {
+  const p = decodeJwtPayload(token)
+  if (!p) return null
+  const id = p.perfilId
+  return typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id) ? id : null
+}
+
+/** Nome do perfil organizacional (`perfilName` no JWT). */
+export function jwtPerfilNameFromToken(token: string): string | null {
+  const p = decodeJwtPayload(token)
+  if (!p) return null
+  const n = p.perfilName
+  return typeof n === 'string' && n.trim().length > 0 ? n.trim() : null
+}
+
 export function isJwtExpired(token: string, skewMs = 30_000): boolean {
   const p = decodeJwtPayload(token)
   if (!p) return true

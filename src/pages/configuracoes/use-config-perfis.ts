@@ -1,37 +1,65 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { AuthRequestError } from '@/services/auth/types'
 import {
-  addPerfil,
-  ensurePerfisSeed,
-  removePerfil,
+  createPerfil,
+  deletePerfil,
+  fetchPerfisList,
+  mapPerfilDtoToConfig,
   type ConfigPerfil,
-} from '@/pages/configuracoes/config-perfis'
+} from '@/services/perfil-service'
 
 export function useConfigPerfis() {
-  const [perfis, setPerfis] = useState<ConfigPerfil[]>(() => ensurePerfisSeed())
+  const [perfis, setPerfis] = useState<ConfigPerfil[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const fetchList = useCallback(async (options?: { showSpinner?: boolean }) => {
+    const showSpinner = options?.showSpinner !== false
+    if (showSpinner) setLoading(true)
+    setLoadError(null)
+    try {
+      const list = await fetchPerfisList()
+      setPerfis(list.map(mapPerfilDtoToConfig))
+    } catch (e) {
+      setPerfis([])
+      setLoadError(
+        e instanceof AuthRequestError ? e.message : 'Não foi possível carregar os perfis.',
+      )
+    } finally {
+      if (showSpinner) setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    const sync = () => setPerfis(ensurePerfisSeed())
-    window.addEventListener('sentineia:perfis-changed', sync)
-    return () => window.removeEventListener('sentineia:perfis-changed', sync)
-  }, [])
+    void fetchList({ showSpinner: true })
+  }, [fetchList])
 
   const refresh = useCallback(() => {
-    setPerfis(ensurePerfisSeed())
-  }, [])
+    void fetchList({ showSpinner: true })
+  }, [fetchList])
 
-  const criar = useCallback((nome: string, descricao: string) => {
-    const next = addPerfil(nome, descricao)
-    setPerfis(next)
-  }, [])
+  const criar = useCallback(
+    async (nome: string, descricao: string) => {
+      const trimmedDesc = descricao.trim()
+      await createPerfil({
+        name: nome.trim(),
+        ...(trimmedDesc !== '' ? { description: trimmedDesc } : {}),
+      })
+      await fetchList({ showSpinner: false })
+    },
+    [fetchList],
+  )
 
-  const remover = useCallback((id: string) => {
-    const next = removePerfil(id)
-    if (next) setPerfis(next)
-    return Boolean(next)
-  }, [])
+  const remover = useCallback(
+    async (id: string) => {
+      await deletePerfil(id)
+      await fetchList({ showSpinner: false })
+    },
+    [fetchList],
+  )
 
   const ids = useMemo(() => perfis.map((p) => p.id), [perfis])
 
-  return { perfis, ids, refresh, criar, remover }
+  return { perfis, ids, loading, loadError, refresh, criar, remover }
 }

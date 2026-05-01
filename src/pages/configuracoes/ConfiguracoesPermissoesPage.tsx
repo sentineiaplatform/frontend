@@ -36,7 +36,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { ensurePerfisSeed } from '@/pages/configuracoes/config-perfis'
 import {
   clearMatrizSalva,
   loadMatrizSalva,
@@ -163,17 +162,26 @@ export function ConfiguracoesPermissoesPage() {
   const [busca, setBusca] = useState('')
   const [filtroColunasPerfil, setFiltroColunasPerfil] = useState<'todos' | string>('todos')
 
-  const baseline = useMemo(() => buildBaselineMatriz(ids), [ids])
+  const perfilNomePorId = useMemo(
+    () => Object.fromEntries(perfis.map((p) => [p.id, p.nome] as const)),
+    [perfis],
+  )
 
-  const [matriz, setMatriz] = useState<MatrizPermissoes>(() => {
-    const pids = ensurePerfisSeed().map((p) => p.id)
-    return mergeSavedMatriz(loadMatrizSalva(), pids, buildBaselineMatriz(pids))
-  })
+  const baseline = useMemo(
+    () => buildBaselineMatriz(ids, perfilNomePorId),
+    [ids, perfilNomePorId],
+  )
+
+  const [matriz, setMatriz] = useState<MatrizPermissoes>({})
 
   useEffect(() => {
-    const b = buildBaselineMatriz(ids)
+    if (ids.length === 0) {
+      setMatriz({})
+      return
+    }
+    const b = buildBaselineMatriz(ids, perfilNomePorId)
     setMatriz(mergeSavedMatriz(loadMatrizSalva(), ids, b))
-  }, [ids])
+  }, [ids, perfilNomePorId])
 
   useEffect(() => {
     if (filtroColunasPerfil !== 'todos' && !ids.includes(filtroColunasPerfil)) {
@@ -259,7 +267,7 @@ export function ConfiguracoesPermissoesPage() {
   }
 
   function onRestaurar() {
-    const b = buildBaselineMatriz(ids)
+    const b = buildBaselineMatriz(ids, perfilNomePorId)
     setMatriz(b)
     clearMatrizSalva()
     toast.message('Matriz reposta', {
@@ -301,7 +309,7 @@ export function ConfiguracoesPermissoesPage() {
               </span>
               <span>Permissões</span>
               <span className="text-muted-foreground bg-muted/50 border-border/50 hidden items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase sm:inline-flex sm:text-[11px]">
-                Módulos · CRUD · pré-backend
+                Módulos · CRUD · rascunho local
               </span>
             </span>
           }
@@ -451,15 +459,6 @@ export function ConfiguracoesPermissoesPage() {
                                   <span className="sm:hidden">{abreviarColuna(p.nome)}</span>
                                   <span className="hidden sm:inline">{p.nome}</span>
                                 </span>
-                                {p.sistema ? (
-                                  <Badge variant="secondary" className="font-normal text-[9px] px-1 py-0">
-                                    Sistema
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="font-normal text-[9px] px-1 py-0">
-                                    Personalizado
-                                  </Badge>
-                                )}
                               </div>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="max-w-xs">

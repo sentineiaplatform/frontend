@@ -120,6 +120,19 @@ export function iterKeys(): string[] {
 
 export type MatrizPermissoes = Record<string, Record<string, boolean>>
 
+/** Mapeia o nome do perfil (ex.: «Administrador») à coluna semântica do modelo inicial. */
+export function seedSlugForPerfilNome(nome: string): SeedPerfilId | null {
+  const n = nome.trim().toLowerCase()
+  const map: Record<string, SeedPerfilId> = {
+    administrador: 'admin',
+    admin: 'admin',
+    triador: 'triador',
+    investigador: 'investigador',
+    leitura: 'leitura',
+  }
+  return map[n] ?? null
+}
+
 function rowSeed(
   cells: Partial<Record<SeedPerfilId, boolean>>,
 ): Record<SeedPerfilId, boolean> {
@@ -161,19 +174,27 @@ function baselineSeedRows(): Record<string, Record<SeedPerfilId, boolean>> {
   return rows
 }
 
-/** Matriz completa para os `profileIds` atuais (seed copiado; restantes = false). */
-export function buildBaselineMatriz(profileIds: string[]): MatrizPermissoes {
+/**
+ * Matriz completa para os `profileIds` atuais.
+ * Valores iniciais por célula copiam o modelo «seed» quando o nome do perfil corresponde
+ * (Administrador, Triador, …); perfis sem correspondência começam a `false`.
+ */
+export function buildBaselineMatriz(
+  profileIds: string[],
+  perfilNomePorId: Record<string, string> = {},
+): MatrizPermissoes {
   const seed = baselineSeedRows()
   const keys = iterKeys()
   const result: MatrizPermissoes = {}
-  const seedSet = new Set<string>(SEED_PERFIL_IDS)
 
   for (const k of keys) {
     const row: Record<string, boolean> = {}
     const seedRow = seed[k]
     for (const pid of profileIds) {
-      if (seedSet.has(pid) && seedRow) {
-        row[pid] = seedRow[pid as SeedPerfilId] ?? false
+      const nome = perfilNomePorId[pid] ?? ''
+      const slug = seedSlugForPerfilNome(nome)
+      if (slug && seedRow) {
+        row[pid] = seedRow[slug] ?? false
       } else {
         row[pid] = false
       }

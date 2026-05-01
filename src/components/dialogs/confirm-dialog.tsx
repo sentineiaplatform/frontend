@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { AlertTriangle, HelpCircle } from 'lucide-react'
+import { AlertTriangle, Check, HelpCircle, Trash2, X } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +43,7 @@ export function ConfirmDialog({
   const Icon = options.icon ?? (variant === 'destructive' ? AlertTriangle : HelpCircle)
   const confirmLabel = options.confirmLabel ?? 'Confirmar'
   const cancelLabel = options.cancelLabel ?? 'Cancelar'
+  const ConfirmActionIcon = variant === 'destructive' ? Trash2 : Check
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -70,13 +71,18 @@ export function ConfirmDialog({
           ) : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel type="button">{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel type="button" className="gap-2">
+            <X className="size-4 shrink-0 opacity-90" aria-hidden strokeWidth={2} />
+            {cancelLabel}
+          </AlertDialogCancel>
           <AlertDialogAction
             id={APP_CONFIRM_PRIMARY_ID}
             type="button"
             variant={variant === 'destructive' ? 'destructive' : 'default'}
+            className="gap-2"
             onClick={() => onConfirm()}
           >
+            <ConfirmActionIcon className="size-4 shrink-0 opacity-95" aria-hidden strokeWidth={2} />
             {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>

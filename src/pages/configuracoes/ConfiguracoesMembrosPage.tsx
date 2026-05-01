@@ -108,8 +108,11 @@ export function ConfiguracoesMembrosPage() {
     const q = busca.trim().toLowerCase()
     return membros.filter((m) => {
       if (q.length === 0) return true
+      const papel = (m.perfil?.name ?? '').toLowerCase()
       return (
-        m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
+        m.name.toLowerCase().includes(q) ||
+        m.email.toLowerCase().includes(q) ||
+        papel.includes(q)
       )
     })
   }, [membros, busca])
@@ -151,8 +154,8 @@ export function ConfiguracoesMembrosPage() {
           }
           description={
             <>
-              Contas com acesso à aplicação (origem: servidor). Papéis organizacionais e convites
-              por e-mail dependem de evolução da API. Permissões detalhadas em{' '}
+              Contas com acesso à aplicação; cada membro tem um <strong className="font-medium">perfil</strong>{' '}
+              organizacional (ligação à matriz em Permissões). Permissões detalhadas em{' '}
               <Link
                 to="/app/configuracoes/permissoes"
                 className="text-primary underline-offset-3 hover:underline"
@@ -195,7 +198,7 @@ export function ConfiguracoesMembrosPage() {
                   setBusca(e.target.value)
                   setPagina(1)
                 }}
-                placeholder="Buscar nome ou e-mail…"
+                placeholder="Buscar nome, e-mail ou perfil…"
                 className="border-border/40 bg-muted/[0.92] dark:bg-muted/95 h-8 w-full border pl-8 text-[13px] shadow-none"
                 aria-label="Buscar membros"
                 disabled={loading}
@@ -329,8 +332,8 @@ export function ConfiguracoesMembrosPage() {
                       {m.email}
                     </TableCell>
                     <TableCell className="px-2 py-2.5 align-middle">
-                      <Badge variant="ghost" className="text-muted-foreground text-[11px] font-normal">
-                        —
+                      <Badge variant="secondary" className="max-w-[14rem] truncate text-[11px] font-normal">
+                        {m.perfil?.name ?? '—'}
                       </Badge>
                     </TableCell>
                     <TableCell className="px-2 py-2.5 text-right align-middle">

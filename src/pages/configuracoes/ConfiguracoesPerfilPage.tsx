@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   AlertCircleIcon,
   ChevronRightIcon,
+  CircleUserRoundIcon,
   GlobeIcon,
   MailIcon,
   UserIcon,
@@ -13,6 +14,13 @@ import { toast } from 'sonner'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Field,
   FieldDescription,
@@ -42,7 +50,11 @@ import {
   setStoredAccessToken,
   waitForStoredAccessToken,
 } from '@/lib/auth-token-storage'
-import { jwtEmailFromToken, jwtNameFromToken } from '@/lib/jwt-decode'
+import {
+  jwtEmailFromToken,
+  jwtNameFromToken,
+  jwtPerfilIdFromToken,
+} from '@/lib/jwt-decode'
 import { syncSessionDisplayNameFromToken } from '@/lib/sync-session-from-token'
 import {
   displayNameFromEmail,
@@ -62,6 +74,7 @@ import {
   perfilFormSchema,
 } from '@/pages/configuracoes/perfil-schema'
 import { labelFusoFromStorage } from '@/pages/configuracoes/timezone-opcoes'
+import { fetchPerfisList } from '@/services/perfil-service'
 import {
   fetchCurrentUserProfile,
   patchCurrentUserProfile,
@@ -74,21 +87,26 @@ export function ConfiguracoesPerfilPage() {
   const displayName = useSessionDisplayName()
   const sessionEmail = useSessionEmail()
   const [profileLoading, setProfileLoading] = useState(true)
-  const [loadedProfile, setLoadedProfile] = useState<{ name: string; email: string } | null>(
-    null,
-  )
+  const [loadedProfile, setLoadedProfile] = useState<{
+    name: string
+    email: string
+    perfilId: string
+  } | null>(null)
+  const [opcoesPerfil, setOpcoesPerfil] = useState<{ id: string; name: string }[]>([])
 
   const defaultValues = useMemo<PerfilFormValues>(() => {
     if (loadedProfile) {
       return {
         fullName: loadedProfile.name,
         email: loadedProfile.email,
+        perfilId: loadedProfile.perfilId,
       }
     }
     const nome = displayName.trim() === '' ? 'Usuário' : displayName.trim()
     return {
       fullName: nome,
       email: sessionEmail.trim(),
+      perfilId: '',
     }
   }, [loadedProfile, displayName, sessionEmail])
 
@@ -116,7 +134,11 @@ export function ConfiguracoesPerfilPage() {
     setProfileLoading(true)
     try {
       const p = await fetchCurrentUserProfile()
-      setLoadedProfile({ name: p.name, email: p.email })
+      setLoadedProfile({
+        name: p.name,
+        email: p.email,
+        perfilId: p.perfilId,
+      })
       setSessionDisplayName(p.name.trim())
     } catch (e) {
       if (e instanceof AuthRequestError && e.status === 401) {
@@ -135,7 +157,8 @@ export function ConfiguracoesPerfilPage() {
         (nameFromJwt && nameFromJwt.length > 0 ? nameFromJwt : null) ??
         (stored && stored.length > 0 ? stored : null) ??
         (email ? displayNameFromEmail(email) : 'Usuário')
-      setLoadedProfile({ name: nome, email })
+      const perfilFromJwt = token != null && token.length > 0 ? jwtPerfilIdFromToken(token) : null
+      setLoadedProfile({ name: nome, email, perfilId: perfilFromJwt ?? '' })
       const description =
         e instanceof AuthRequestError ? e.message : 'Tente novamente dentro de instantes.'
       toast.error('Não foi possível carregar o perfil', { description })
@@ -153,6 +176,18 @@ export function ConfiguracoesPerfilPage() {
   }, [isReady, loadProfile])
 
   useEffect(() => {
+    if (!isAuthenticated) return
+    void (async () => {
+      try {
+        const list = await fetchPerfisList()
+        setOpcoesPerfil(list.map((p) => ({ id: p.id, name: p.name })))
+      } catch {
+        setOpcoesPerfil([])
+      }
+    })()
+  }, [isAuthenticated])
+
+  useEffect(() => {
     reset(defaultValues)
   }, [defaultValues, reset])
 
@@ -165,11 +200,20 @@ export function ConfiguracoesPerfilPage() {
       const updated = await patchCurrentUserProfile({
         name: nome,
         email: values.email.trim(),
+        perfilId: values.perfilId,
       })
       setStoredAccessToken(updated.accessToken, getAccessTokenRememberPreference())
       syncSessionDisplayNameFromToken(updated.accessToken)
-      setLoadedProfile({ name: updated.name, email: updated.email })
-      reset({ fullName: updated.name, email: updated.email })
+      setLoadedProfile({
+        name: updated.name,
+        email: updated.email,
+        perfilId: updated.perfilId,
+      })
+      reset({
+        fullName: updated.name,
+        email: updated.email,
+        perfilId: updated.perfilId,
+      })
       toast.success('Perfil atualizado', {
         description: 'As alterações foram guardadas.',
       })
@@ -321,6 +365,51 @@ export function ConfiguracoesPerfilPage() {
                 <FieldError className="flex items-start gap-2 [&>svg]:shrink-0">
                   <AlertCircleIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
                   <span>{errors.email.message}</span>
+                </FieldError>
+              ) : null}
+            </Field>
+
+            <Field
+              className="sm:col-span-2"
+              data-invalid={errors.perfilId ? true : undefined}
+            >
+              <FieldLabel className="text-sm font-medium">Perfil organizacional</FieldLabel>
+              <FieldDescription className="text-muted-foreground px-0 text-xs leading-snug">
+                Papel associado à sua conta (permissões em Configurações → Permissões).
+              </FieldDescription>
+              <Controller
+                control={control}
+                name="perfilId"
+                render={({ field }) => (
+                  <Select
+                    value={field.value.length > 0 ? field.value : undefined}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger
+                      id="perfil-org-select"
+                      className={cn(AUTH_INPUT_GROUP_CLASS, 'h-10 w-full gap-2')}
+                      aria-invalid={errors.perfilId ? 'true' : undefined}
+                    >
+                      <CircleUserRoundIcon
+                        className="text-muted-foreground size-4 shrink-0"
+                        aria-hidden
+                      />
+                      <SelectValue placeholder="Selecionar perfil…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {opcoesPerfil.map((op) => (
+                        <SelectItem key={op.id} value={op.id}>
+                          {op.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.perfilId ? (
+                <FieldError className="flex items-start gap-2 [&>svg]:shrink-0">
+                  <AlertCircleIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  <span>{errors.perfilId.message}</span>
                 </FieldError>
               ) : null}
             </Field>

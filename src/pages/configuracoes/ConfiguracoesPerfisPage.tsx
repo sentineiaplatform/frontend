@@ -6,8 +6,6 @@ import {
   FileTextIcon,
   PlusIcon,
   SearchIcon,
-  ShieldIcon,
-  SlidersHorizontalIcon,
   TextAlignStartIcon,
   Trash2Icon,
   UserIcon,
@@ -31,16 +29,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -55,12 +45,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { appendConfigAuditLog } from '@/pages/configuracoes/configuracoes-audit-log'
 import { configuracoesPageShellClass } from '@/pages/configuracoes/configuracoes-layout'
+import { AuthRequestError } from '@/services/auth/types'
 import {
   CabecalhoColuna,
   CabecalhoColunaAcoes,
-  LINHAS_DADOS_MESTRES,
   pinTdAcoes,
 } from '@/pages/dados-mestres/dados-mestres-listagem-shared'
 import {
@@ -86,15 +75,16 @@ const perfilCrudFields: CrudFormField<PerfilCreateValues>[] = [
   },
 ]
 
-/** Perfis da organização — listagem e criação em modal (pré-backend). */
+const PERFIS_ITENS_POR_PAGINA = [10, 20, 50, 100] as const
+
+/** Perfis da organização — dados e regras vindos da API (`GET/POST/DELETE /api/perfis`). */
 export function ConfiguracoesPerfisPage() {
-  const { perfis, criar, remover } = useConfigPerfis()
+  const { perfis, criar, remover, loading, loadError, refresh } = useConfigPerfis()
   const [modalOpen, setModalOpen] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [pagina, setPagina] = useState(1)
   const [itensPorPagina, setItensPorPagina] = useState(20)
   const [busca, setBusca] = useState('')
-  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'sistema' | 'personalizado'>('todos')
 
   const form = useForm<PerfilCreateValues>({
     resolver: zodResolver(perfilCreateSchema),
@@ -104,21 +94,17 @@ export function ConfiguracoesPerfisPage() {
   const dadosFiltrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
     return perfis.filter((p) => {
-      const matchBusca =
-        q.length === 0 ||
+      if (q.length === 0) return true
+      return (
         p.nome.toLowerCase().includes(q) ||
         (p.descricao ?? '').toLowerCase().includes(q)
-      const matchTipo =
-        filtroTipo === 'todos' ||
-        (filtroTipo === 'sistema' && p.sistema) ||
-        (filtroTipo === 'personalizado' && !p.sistema)
-      return matchBusca && matchTipo
+      )
     })
-  }, [perfis, busca, filtroTipo])
+  }, [perfis, busca])
 
   useEffect(() => {
     setPagina(1)
-  }, [busca, filtroTipo])
+  }, [busca])
 
   const totalItens = dadosFiltrados.length
   const totalPaginas =
@@ -135,13 +121,12 @@ export function ConfiguracoesPerfisPage() {
     setPagina(1)
   }
 
-  const filtrosAtivos = busca.trim().length > 0 || filtroTipo !== 'todos'
+  const filtrosAtivos = busca.trim().length > 0
   const limparFiltros = () => {
     setBusca('')
-    setFiltroTipo('todos')
   }
 
-  const colSpanVazio = 4
+  const colSpanVazio = 3
 
   function abrirModal() {
     form.reset({ nome: '', descricao: '' })
@@ -153,34 +138,32 @@ export function ConfiguracoesPerfisPage() {
     form.reset({ nome: '', descricao: '' })
   }
 
-  function onSubmit(values: PerfilCreateValues) {
-    criar(values.nome, values.descricao)
-    toast.success('Perfil criado', {
-      description: 'Aparece como coluna em Permissões; edite a matriz para definir o que pode fazer.',
-    })
-    appendConfigAuditLog({
-      category: 'perfis',
-      action: 'Perfil criado',
-      detail: values.nome.trim(),
-    })
-    fecharModal()
+  async function onSubmit(values: PerfilCreateValues) {
+    try {
+      await criar(values.nome, values.descricao)
+      toast.success('Perfil criado')
+      fecharModal()
+    } catch (e) {
+      const description =
+        e instanceof AuthRequestError ? e.message : 'Verifique a ligação ao servidor e tente novamente.'
+      toast.error('Não foi possível criar o perfil', { description })
+    }
   }
 
-  function confirmarEliminar() {
+  async function confirmarEliminar() {
     if (!deleteId) return
     const p = perfis.find((x) => x.id === deleteId)
-    const ok = remover(deleteId)
-    setDeleteId(null)
-    if (!ok) {
-      toast.error('Não foi possível remover', { description: 'Perfis de sistema estão protegidos.' })
-      return
+    const nome = p?.nome
+    try {
+      await remover(deleteId)
+      setDeleteId(null)
+      toast.message('Perfil removido', { description: nome })
+    } catch (e) {
+      setDeleteId(null)
+      const description =
+        e instanceof AuthRequestError ? e.message : 'Verifique a ligação ao servidor e tente novamente.'
+      toast.error('Não foi possível remover o perfil', { description })
     }
-    toast.message('Perfil removido', { description: p?.nome })
-    appendConfigAuditLog({
-      category: 'perfis',
-      action: 'Perfil removido',
-      detail: p?.nome,
-    })
   }
 
   return (
@@ -193,28 +176,25 @@ export function ConfiguracoesPerfisPage() {
                 <CircleUserRoundIcon className="size-[1.15rem]" strokeWidth={1.75} aria-hidden />
               </span>
               <span>Perfis</span>
-              <span className="text-muted-foreground bg-muted/50 border-border/50 hidden items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase sm:inline-flex sm:text-[11px]">
-                Armazenamento local
-              </span>
             </span>
           }
           description={
             <>
-              Papéis configuráveis da organização (além da sua{' '}
+              Lista obtida do servidor. Cada utilizador está associado a um perfil (ver{' '}
               <Link
                 to="/app/configuracoes/perfil"
                 className="text-primary underline-offset-3 hover:underline"
               >
                 Conta
               </Link>
-              ). As colunas da matriz em{' '}
+              ). A matriz em{' '}
               <Link
                 to="/app/configuracoes/permissoes"
                 className="text-primary underline-offset-3 hover:underline"
               >
                 Permissões
               </Link>{' '}
-              seguem estes perfis. Os quatro primeiros são de sistema e não podem ser eliminados.
+              usa estes perfis como colunas.
             </>
           }
         >
@@ -224,12 +204,31 @@ export function ConfiguracoesPerfisPage() {
             size="sm"
             className="h-9 gap-1.5 rounded-lg px-3"
             onClick={abrirModal}
+            disabled={Boolean(loadError) || loading}
           >
             <PlusIcon className="size-3.5" strokeWidth={2} aria-hidden />
             Novo perfil
           </Button>
         </RegistrosPageHeader>
 
+        {loadError ? (
+          <div
+            role="alert"
+            className="border-destructive/30 bg-destructive/5 text-destructive flex flex-col gap-2 rounded-lg border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+          >
+            <span>{loadError}</span>
+            <Button type="button" variant="outline" size="sm" className="shrink-0 border-destructive/40" onClick={refresh}>
+              Tentar novamente
+            </Button>
+          </div>
+        ) : null}
+
+        {loading && perfis.length === 0 && !loadError ? (
+          <p className="text-muted-foreground text-sm">A carregar perfis…</p>
+        ) : null}
+
+        {loading && perfis.length === 0 && !loadError ? null : (
+          <>
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between sm:gap-2 sm:overflow-x-auto md:gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap md:min-h-10 md:flex-1 md:min-w-0">
             <div className="relative w-full max-w-[17.5rem] min-w-0 shrink sm:max-w-[15rem] md:max-w-[17.5rem]">
@@ -249,25 +248,6 @@ export function ConfiguracoesPerfisPage() {
           </div>
 
           <div className="flex w-full shrink-0 flex-nowrap items-center justify-end gap-2 sm:w-auto sm:justify-end sm:gap-2 md:gap-3">
-            <Select
-              value={filtroTipo}
-              onValueChange={(v) => setFiltroTipo(v as 'todos' | 'sistema' | 'personalizado')}
-            >
-              <SelectTrigger
-                size="sm"
-                aria-label="Tipo de perfil"
-                className="border-border/40 bg-muted/[0.92] dark:bg-muted/95 h-8 w-[min(100%,11rem)] gap-1.5 shadow-none"
-              >
-                <SlidersHorizontalIcon className="text-muted-foreground size-3 shrink-0" aria-hidden />
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="sistema">Sistema</SelectItem>
-                <SelectItem value="personalizado">Personalizado</SelectItem>
-              </SelectContent>
-            </Select>
-
             {filtrosAtivos ? (
               <Button
                 type="button"
@@ -297,7 +277,7 @@ export function ConfiguracoesPerfisPage() {
             itensPorPagina,
             totalItens,
             onPaginaChange: setPagina,
-            opcoesItensPorPagina: LINHAS_DADOS_MESTRES,
+            opcoesItensPorPagina: PERFIS_ITENS_POR_PAGINA,
             onItensPorPaginaChange: aoMudarLinhas,
           }}
         >
@@ -309,9 +289,6 @@ export function ConfiguracoesPerfisPage() {
                 </TableHead>
                 <TableHead className="text-muted-foreground min-w-[14rem] px-2 py-2.5 text-left text-[11px]">
                   <CabecalhoColuna icone={TextAlignStartIcon} rotulo="Descrição" />
-                </TableHead>
-                <TableHead className="text-muted-foreground min-w-[7rem] px-2 py-2.5 text-left text-[11px]">
-                  <CabecalhoColuna icone={ShieldIcon} rotulo="Tipo" />
                 </TableHead>
                 <TableHead
                   className={cn(
@@ -332,7 +309,16 @@ export function ConfiguracoesPerfisPage() {
                     className="text-muted-foreground py-14 text-center text-sm"
                   >
                     <div className="flex flex-col items-center gap-2">
-                      Nenhum resultado. Ajuste filtros ou busca.
+                      {perfis.length === 0 ? (
+                        <>
+                          Nenhum perfil devolvido pelo servidor.
+                          <span className="text-[12px]">Crie um perfil com «Novo perfil» ou verifique a sessão.</span>
+                        </>
+                      ) : filtrosAtivos ? (
+                        <>Nenhum perfil corresponde à busca atual.</>
+                      ) : (
+                        <>Nenhum resultado nesta página.</>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -348,38 +334,23 @@ export function ConfiguracoesPerfisPage() {
                     <TableCell className="text-muted-foreground max-w-[24rem] px-2 py-2.5 align-middle text-[12px] leading-snug">
                       {p.descricao || '—'}
                     </TableCell>
-                    <TableCell className="px-2 py-2.5 align-middle">
-                      {p.sistema ? (
-                        <Badge variant="secondary" className="text-[11px] font-normal">
-                          Sistema
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[11px] font-normal">
-                          Personalizado
-                        </Badge>
-                      )}
-                    </TableCell>
                     <TableCell className={pinTdAcoes(false)}>
                       <div className="inline-flex flex-nowrap items-center justify-end gap-1">
-                        {p.sistema ? (
-                          <span className="text-muted-foreground px-1 text-xs">—</span>
-                        ) : (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon-sm"
-                                className="border-destructive/25 text-destructive hover:bg-destructive/10 size-8"
-                                aria-label={`Remover ${p.nome}`}
-                                onClick={() => setDeleteId(p.id)}
-                              >
-                                <Trash2Icon className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top">Eliminar perfil</TooltipContent>
-                          </Tooltip>
-                        )}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-sm"
+                              className="border-destructive/25 text-destructive hover:bg-destructive/10 size-8"
+                              aria-label={`Remover ${p.nome}`}
+                              onClick={() => setDeleteId(p.id)}
+                            >
+                              <Trash2Icon className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Eliminar perfil</TooltipContent>
+                        </Tooltip>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -388,6 +359,8 @@ export function ConfiguracoesPerfisPage() {
             </TableBody>
           </Table>
         </RegistrosListaPaginada>
+          </>
+        )}
       </div>
 
       {modalOpen ? (
@@ -416,8 +389,12 @@ export function ConfiguracoesPerfisPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={confirmarEliminar}>
+            <AlertDialogCancel type="button" className="gap-2">
+              <XIcon className="size-4 shrink-0 opacity-90" aria-hidden strokeWidth={2} />
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction variant="destructive" className="gap-2" onClick={confirmarEliminar}>
+              <Trash2Icon className="size-4 shrink-0 opacity-95" aria-hidden strokeWidth={2} />
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
