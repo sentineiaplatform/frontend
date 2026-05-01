@@ -19,9 +19,9 @@ const configuracoesNavItems: { to: string; label: string; icon: LucideIcon }[] =
   { to: '/app/configuracoes/geral', label: 'Geral', icon: SlidersHorizontalIcon },
   { to: '/app/configuracoes/perfil', label: 'Conta', icon: UserIcon },
   { to: '/app/configuracoes/perfis', label: 'Perfis', icon: CircleUserRoundIcon },
-  { to: '/app/configuracoes/seguranca', label: 'Segurança', icon: ShieldIcon },
-  { to: '/app/configuracoes/membros', label: 'Membros', icon: UsersIcon },
   { to: '/app/configuracoes/permissoes', label: 'Permissões', icon: KeyRoundIcon },
+  { to: '/app/configuracoes/membros', label: 'Membros', icon: UsersIcon },
+  { to: '/app/configuracoes/seguranca', label: 'Segurança', icon: ShieldIcon },
   { to: '/app/configuracoes/logs', label: 'Logs', icon: ScrollTextIcon },
 ]
 

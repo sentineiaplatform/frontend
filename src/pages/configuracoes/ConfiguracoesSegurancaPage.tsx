@@ -191,7 +191,7 @@ export function ConfiguracoesSegurancaPage() {
         </div>
       </header>
 
-      <div className="mt-6 max-w-xl">
+      <div className="mt-6 w-full min-w-0">
         <form
           id="form-seguranca-senha"
           className={cn(configuracoesSectionCardClass, 'min-h-0')}
