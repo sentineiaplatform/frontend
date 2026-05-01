@@ -1,4 +1,6 @@
+import { useLayoutEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { syncUiZoomFromGeralStorage } from '@/lib/ui-zoom'
 import { DashboardLayout } from '@/layouts/dashboard/dashboard-layout'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPassword'
 import { LoginPage } from '@/pages/auth/Login'
@@ -11,6 +13,7 @@ import { ConfiguracoesSegurancaPage } from '@/pages/configuracoes/ConfiguracoesS
 import { ConfiguracoesPerfisPage } from '@/pages/configuracoes/ConfiguracoesPerfisPage'
 import { ConfiguracoesMembrosPage } from '@/pages/configuracoes/ConfiguracoesMembrosPage'
 import { ConfiguracoesPermissoesPage } from '@/pages/configuracoes/ConfiguracoesPermissoesPage'
+import { DenunciaInvestigacaoPage } from '@/pages/denuncias/DenunciaInvestigacaoPage'
 import { DenunciaNovaPage } from '@/pages/denuncias/DenunciaNovaPage'
 import { DenunciasPage } from '@/pages/denuncias/DenunciasPage'
 import { CategoriaDenunciasPage } from '@/pages/dados-mestres/CategoriaDenunciasPage'
@@ -24,6 +27,10 @@ import { HomePage } from '@/pages/HomePage'
 import { AjudaSuportePage } from '@/pages/ajuda/AjudaSuportePage'
 
 export default function App() {
+  useLayoutEffect(() => {
+    syncUiZoomFromGeralStorage()
+  }, [])
+
   return (
     <BrowserRouter>
       <Routes>
@@ -43,6 +50,7 @@ export default function App() {
           <Route index element={<Navigate to="painel" replace />} />
           <Route path="painel" element={<DashboardHomePage />} />
           <Route path="denuncias/new" element={<DenunciaNovaPage />} />
+          <Route path="denuncias/:protocolo/investigacao" element={<DenunciaInvestigacaoPage />} />
           <Route path="denuncias" element={<DenunciasPage />} />
           <Route
             path="relatorios/visao-geral"

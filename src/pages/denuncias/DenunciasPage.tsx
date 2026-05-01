@@ -83,6 +83,7 @@ import {
 import { cn } from '@/lib/utils'
 import {
   DENUNCIAS_MOCK,
+  hrefInvestigacaoDenuncia,
   type DenunciaMock,
   type DenunciaPrioridade,
   type DenunciaStatus,
@@ -287,6 +288,7 @@ function exportarCsv(linhas: DenunciaMock[]) {
     'area_demanda',
     'tipo_entrada',
     'atualizado_em',
+    'qtd_evidencias',
   ]
   const esc = (s: string) => `"${s.replaceAll('"', '""')}"`
   const body = linhas.map((d) =>
@@ -301,6 +303,7 @@ function exportarCsv(linhas: DenunciaMock[]) {
       d.areaDemanda,
       d.tipoEntrada,
       d.atualizadoEm,
+      String(d.evidencias.length),
     ]
       .map(esc)
       .join(','),
@@ -994,6 +997,12 @@ export function DenunciasPage() {
                       <button
                         type="button"
                         className="hover:text-primary/90 inline-flex max-w-full items-start gap-2 text-left text-[13px] leading-snug font-medium underline-offset-2 hover:underline"
+                        onClick={() =>
+                          navigate(hrefInvestigacaoDenuncia(d.protocolo), {
+                            state: { denunciasVista: modoLista },
+                          })
+                        }
+                        aria-label={`Abrir investigação — ${d.protocolo}`}
                       >
                         <FileText className="text-primary/55 mt-0.5 size-4 shrink-0" aria-hidden strokeWidth={1.75} />
                         <span className="break-words">{d.protocolo}</span>
@@ -1174,9 +1183,18 @@ export function DenunciasPage() {
                       <CanalIcon className="size-3.5" aria-hidden strokeWidth={1.75} />
                     </span>
                     <div className="min-w-0 flex-1 space-y-0.5">
-                      <p className="text-primary text-[13px] font-semibold leading-tight tracking-tight">
+                      <button
+                        type="button"
+                        className="text-primary hover:text-primary/85 text-left text-[13px] font-semibold leading-tight tracking-tight underline-offset-2 hover:underline"
+                        onClick={() =>
+                          navigate(hrefInvestigacaoDenuncia(d.protocolo), {
+                            state: { denunciasVista: modoLista },
+                          })
+                        }
+                        aria-label={`Abrir investigação — ${d.protocolo}`}
+                      >
                         {d.protocolo}
-                      </p>
+                      </button>
                       <p className="text-foreground/95 line-clamp-2 text-[12px] leading-snug">{d.categoria}</p>
                       <p className="text-muted-foreground truncate text-[11px] leading-snug">{d.departamento}</p>
                     </div>

@@ -1,6 +1,23 @@
 export type DenunciaStatus = 'aberta' | 'em_analise' | 'encerrada'
 export type DenunciaPrioridade = 'P1' | 'P2' | 'P3'
 
+/** Ficheiros enviados pelo denunciante no registo (mock até API). */
+export type DenunciaEvidenciaMock = {
+  id: string
+  nome: string
+  tamanho: string
+  enviadoEm: string
+}
+
+export type DenunciaAnonimato = 'anonimo' | 'identificado'
+
+/** Metadados técnicos do canal (mock; respeitar política de retenção na API real). */
+export type DenunciaMetadadosEntradaMock = {
+  ip?: string
+  localizacaoAprox?: string
+  userAgent?: string
+}
+
 export type DenunciaMock = {
   id: string
   protocolo: string
@@ -13,11 +30,28 @@ export type DenunciaMock = {
   areaDemanda: string
   tipoEntrada: string
   atualizadoEm: string
+  /** Evidências anexadas pelo denunciante no canal de entrada. */
+  evidencias: DenunciaEvidenciaMock[]
+  /** Texto integral submetido (imutável na receção). */
+  relatoOriginal: string
+  anonimato: DenunciaAnonimato
+  metadadosEntrada: DenunciaMetadadosEntradaMock
+  /** Prazo de SLA para triagem inicial, em horas após registradoEm. */
+  slaTriagemHoras: number
 }
 
 type DenunciaRowBase = Omit<
   DenunciaMock,
-  'prioridade' | 'departamento' | 'areaDemanda' | 'tipoEntrada' | 'atualizadoEm'
+  | 'prioridade'
+  | 'departamento'
+  | 'areaDemanda'
+  | 'tipoEntrada'
+  | 'atualizadoEm'
+  | 'evidencias'
+  | 'relatoOriginal'
+  | 'anonimato'
+  | 'metadadosEntrada'
+  | 'slaTriagemHoras'
 >
 
 const DENUNCIA_BASE_ROWS: DenunciaRowBase[] = [
@@ -239,6 +273,59 @@ function dataAtualizacaoIso(registradoIso: string, diasOffset: number) {
   return d.toISOString().slice(0, 19)
 }
 
+function relatoOriginalMock(protocolo: string, categoria: string): string {
+  return [
+    `(${protocolo})`,
+    '',
+    'Sou colaborador há mais de dois anos na equipa de operações. Nos últimos meses tenho sido alvo de comentários humilhantes em reuniões com clientes presentes, com tom sarcástico e referências ao meu desempenho “precisando de supervisão constante”.',
+    '',
+    `O tema declarado no formulário foi «${categoria}». Peço que o caso seja tratado com confidencialidade — há receio de represálias por parte da chefia imediata.`,
+    '',
+    'Datas aproximadas: incidentes recorrentes entre fevereiro e março, maior intensidade às segundas-feiras após relatórios semanais.',
+  ].join('\n')
+}
+
+function metadadosEntradaMock(idx: number): DenunciaMetadadosEntradaMock {
+  const showIp = idx % 5 !== 0
+  return {
+    ip: showIp ? `10.${20 + (idx % 40)}.${idx % 200}.${idx % 180}` : undefined,
+    localizacaoAprox: idx % 7 === 0 ? 'Indisponível (anonimizado)' : 'Grande Porto · ~12 km',
+    userAgent:
+      idx % 3 === 0
+        ? 'Safari · iOS 18 · Web canal'
+        : 'Chrome 134 · Windows 11 · Desktop',
+  }
+}
+
+function evidenciasMockDenuncia(idx: number, registradoEm: string): DenunciaEvidenciaMock[] {
+  const ts = registradoEm.length >= 19 ? registradoEm.slice(0, 19) : registradoEm
+  if (idx % 6 === 2) return []
+  const list: DenunciaEvidenciaMock[] = []
+  list.push({
+    id: `ev-${idx}-1`,
+    nome: idx % 2 === 0 ? 'relato_e_contexto.pdf' : 'historico_mensagens_anonimo.pdf',
+    tamanho: idx % 2 === 0 ? '312 KB' : '428 KB',
+    enviadoEm: ts,
+  })
+  if (idx % 3 === 0 || idx === 0) {
+    list.push({
+      id: `ev-${idx}-2`,
+      nome: idx === 0 ? 'print_escalas_equipa.pdf' : 'anexo_politica_interna.pdf',
+      tamanho: idx === 0 ? '1,1 MB' : '220 KB',
+      enviadoEm: ts,
+    })
+  }
+  if (idx % 5 === 1) {
+    list.push({
+      id: `ev-${idx}-3`,
+      nome: 'gravacao_chamada_entrada.m4a',
+      tamanho: '4,8 MB',
+      enviadoEm: ts,
+    })
+  }
+  return list
+}
+
 /** Dados fictícios até integração com API — colunas extras para simular lista larga. */
 export const DENUNCIAS_MOCK: DenunciaMock[] = DENUNCIA_BASE_ROWS.map((row, idx) => {
   const dias = idx % 5
@@ -250,5 +337,21 @@ export const DENUNCIAS_MOCK: DenunciaMock[] = DENUNCIA_BASE_ROWS.map((row, idx) 
     areaDemanda: DENUNCIA_AREAS_DEMANDA_MOCK[idx % DENUNCIA_AREAS_DEMANDA_MOCK.length],
     tipoEntrada: DENUNCIA_TIPOS_ENTRADA_MOCK[idx % DENUNCIA_TIPOS_ENTRADA_MOCK.length],
     atualizadoEm: dataAtualizacaoIso(row.registradoEm, dias),
+    evidencias: evidenciasMockDenuncia(idx, row.registradoEm),
+    relatoOriginal: relatoOriginalMock(row.protocolo, row.categoria),
+    anonimato: idx % 3 === 0 ? 'identificado' : 'anonimo',
+    metadadosEntrada: metadadosEntradaMock(idx),
+    slaTriagemHoras: 48,
   }
 })
+
+export function findDenunciaByProtocolo(protocolo: string): DenunciaMock | undefined {
+  const p = protocolo.trim()
+  if (!p) return undefined
+  return DENUNCIAS_MOCK.find((d) => d.protocolo === p)
+}
+
+/** Rota da área de trabalho (investigação) ligada ao fluxo configurado em Dados mestres → Workflows. */
+export function hrefInvestigacaoDenuncia(protocolo: string): string {
+  return `/app/denuncias/${encodeURIComponent(protocolo.trim())}/investigacao`
+}

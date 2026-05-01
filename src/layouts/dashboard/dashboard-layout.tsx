@@ -73,7 +73,8 @@ function DashboardShellBody() {
     >
       <DashboardSidebar />
       <ConfiguracoesSidebar open={areaConfiguracoes} />
-      <SidebarInset className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      {/* `overflow-x-hidden`: clip horizontal; evitar `overflow-hidden` no eixo Y para não quebrar `position: sticky` no conteúdo com scroll (`DashboardContent`). */}
+      <SidebarInset className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
         <DashboardContent />
       </SidebarInset>
     </div>

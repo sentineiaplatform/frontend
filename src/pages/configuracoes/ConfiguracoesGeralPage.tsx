@@ -8,6 +8,9 @@ import {
   ChevronRightIcon,
   GlobeIcon,
   LanguagesIcon,
+  MinusIcon,
+  PaletteIcon,
+  PlusIcon,
   SlidersHorizontalIcon,
   XIcon,
 } from 'lucide-react'
@@ -40,6 +43,12 @@ import {
   AUTH_INPUT_GROUP_CONTROL_CLASS,
   AUTH_SELECT_TRIGGER_IN_GROUP_CLASS,
 } from '@/lib/auth-matched-input-group'
+import {
+  UI_ZOOM_ALLOWED,
+  applyUiZoomPercent,
+  stepUiZoomPercent,
+  type UiZoomPercent,
+} from '@/lib/ui-zoom'
 import { cn } from '@/lib/utils'
 
 import {
@@ -62,6 +71,7 @@ const defaultGeralValues: GeralFormValues = {
   locale: 'pt-BR',
   dateFormat: 'dd/MM/yyyy',
   defaultTimezone: 'America/Sao_Paulo',
+  uiZoom: '100',
 }
 
 function readInitial(): GeralFormValues {
@@ -110,6 +120,7 @@ export function ConfiguracoesGeralPage() {
     }
     baselineRef.current = payload
     reset(payload)
+    applyUiZoomPercent(Number(payload.uiZoom) as UiZoomPercent)
     toast.success('Configurações salvas', {
       description: 'Preferências guardadas neste dispositivo.',
     })
@@ -143,8 +154,8 @@ export function ConfiguracoesGeralPage() {
             </span>
           </div>
           <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
-            Organização e regional (idioma, datas, fuso). O tema fica no menu lateral. Salvo só neste
-            navegador até existir API.
+            Organização, regional (idioma, datas, fuso) e escala da interface. Claro/escuro continua no
+            menu lateral. Salvo só neste navegador até existir API.
           </p>
         </div>
       </header>
@@ -357,6 +368,96 @@ export function ConfiguracoesGeralPage() {
                 </Field>
               </FieldGroup>
             </FieldSet>
+          </div>
+
+          <div className={cn(configuracoesSectionCardClass, 'min-h-0 lg:col-span-2')}>
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
+              <div className="mb-5 flex gap-3 lg:mb-0 lg:max-w-[min(100%,22rem)]">
+                <div className={configuracoesSectionIconClass}>
+                  <PaletteIcon className="size-5" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <FieldLegend className="text-foreground font-heading !mb-0 px-0 text-base font-semibold tracking-tight">
+                    Aparência
+                  </FieldLegend>
+                  <p className="text-muted-foreground mt-1 text-xs leading-snug">
+                    Zoom global neste navegador — texto e layout mantêm proporção.
+                  </p>
+                </div>
+              </div>
+
+              <FieldSet className="min-w-0 flex-1 gap-0 border-0 p-0 lg:max-w-xl">
+                <Field data-invalid={errors.uiZoom ? true : undefined} className="gap-3">
+                  <FieldLabel className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+                    Escala da interface
+                  </FieldLabel>
+                  <Controller
+                    name="uiZoom"
+                    control={control}
+                    render={({ field }) => {
+                      const current = Number(field.value) as UiZoomPercent
+                      const minZ = UI_ZOOM_ALLOWED[0]
+                      const maxZ = UI_ZOOM_ALLOWED[UI_ZOOM_ALLOWED.length - 1]
+                      const atMin = current <= minZ
+                      const atMax = current >= maxZ
+                      return (
+                        <div className="space-y-2">
+                          <div
+                            ref={field.ref}
+                            onBlur={field.onBlur}
+                            role="group"
+                            aria-label="Nível de zoom da interface"
+                            aria-invalid={errors.uiZoom ? true : undefined}
+                            className="border-border/60 bg-muted/35 ring-border/45 flex max-w-md overflow-hidden rounded-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 dark:bg-muted/25 dark:ring-border/35"
+                          >
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              disabled={atMin}
+                              aria-label="Diminuir escala"
+                              onClick={() =>
+                                field.onChange(String(stepUiZoomPercent(current, -1)))
+                              }
+                              className="border-border/60 text-foreground hover:bg-muted/60 size-11 shrink-0 rounded-none border-0 border-r shadow-none"
+                            >
+                              <MinusIcon className="size-4" aria-hidden />
+                            </Button>
+                            <div className="bg-background/80 flex min-h-11 min-w-[5.5rem] flex-1 items-center justify-center border-border/50 border-x px-3">
+                              <span className="text-foreground text-base font-semibold tabular-nums tracking-tight">
+                                {field.value}%
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              disabled={atMax}
+                              aria-label="Aumentar escala"
+                              onClick={() =>
+                                field.onChange(String(stepUiZoomPercent(current, 1)))
+                              }
+                              className="border-border/60 text-foreground hover:bg-muted/60 size-11 shrink-0 rounded-none border-0 border-l shadow-none"
+                            >
+                              <PlusIcon className="size-4" aria-hidden />
+                            </Button>
+                          </div>
+                          <p className="text-muted-foreground text-[11px] leading-snug">
+                            O nível escolhido aplica-se ao gravar as configurações gerais.
+                          </p>
+                        </div>
+                      )
+                    }}
+                  />
+                  {errors.uiZoom ? (
+                    <FieldError className="flex items-start gap-2 [&>svg]:shrink-0">
+                      <AlertCircleIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
+                      <span>{errors.uiZoom.message}</span>
+                    </FieldError>
+                  ) : null}
+                </Field>
+              </FieldSet>
+            </div>
           </div>
         </div>
 
