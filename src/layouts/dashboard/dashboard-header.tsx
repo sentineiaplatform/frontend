@@ -154,7 +154,7 @@ export function DashboardHeader() {
               onSelect={() => navigate('/app/configuracoes/perfil')}
             >
               <UserIcon className="size-4" aria-hidden />
-              Meu perfil
+              Minha conta
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
