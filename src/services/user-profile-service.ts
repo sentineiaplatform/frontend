@@ -136,3 +136,29 @@ export async function patchCurrentUserProfile(body: {
   }
   return res.json() as Promise<UserProfileUpdateDto>
 }
+
+/** `POST /api/users/me/password` — alterar senha (sessão atual). Resposta 204 sem corpo. */
+export async function changeCurrentUserPassword(body: {
+  currentPassword: string
+  newPassword: string
+}): Promise<void> {
+  let res: Response
+  try {
+    res = await authorizedFetch('/api/users/me/password', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        currentPassword: body.currentPassword,
+        newPassword: body.newPassword,
+      }),
+    })
+  } catch {
+    throw new AuthRequestError(AUTH_MSG_SERVICO_INDISPONIVEL, 0)
+  }
+  if (!res.ok) {
+    throw new AuthRequestError(await parseErrorMessage(res), res.status)
+  }
+}

@@ -46,6 +46,7 @@ import {
   AUTH_INPUT_GROUP_CONTROL_CLASS,
   AUTH_SELECT_TRIGGER_IN_GROUP_CLASS,
 } from '@/lib/auth-matched-input-group'
+import { useAuth } from '@/contexts/auth-context'
 import {
   CONFIG_SEGURANCA_PREFS_KEY,
   SENHA_ATUAL_PADRAO,
@@ -53,6 +54,8 @@ import {
   lerSenhaArmazenadaLocal,
 } from '@/lib/seguranca-local-storage'
 import { cn } from '@/lib/utils'
+import { changeCurrentUserPassword } from '@/services/user-profile-service'
+import { AuthRequestError } from '@/services/auth/types'
 
 import {
   configuracoesPageShellClass,
@@ -101,6 +104,7 @@ function readPrefsInitial(): SegurancaPrefsValues {
 }
 
 export function ConfiguracoesSegurancaPage() {
+  const { isAuthenticated } = useAuth()
   const prefsInitial = useMemo(() => readPrefsInitial(), [])
   const prefsBaselineRef = useRef(prefsInitial)
 
@@ -158,7 +162,54 @@ export function ConfiguracoesSegurancaPage() {
     toast.message('Alterações descartadas.')
   }
 
-  function onSubmitSenha(values: SegurancaSenhaValues) {
+  async function onSubmitSenha(values: SegurancaSenhaValues) {
+    if (isAuthenticated) {
+      try {
+        await changeCurrentUserPassword({
+          currentPassword: values.currentPassword,
+          newPassword: values.newPassword,
+        })
+        senhaForm.reset(defaultSenha)
+        setShowCurrent(false)
+        setShowNew(false)
+        setShowConfirm(false)
+        toast.success('Senha atualizada', {
+          description: 'A nova senha já está ativa na sua conta.',
+        })
+        appendConfigAuditLog({
+          category: 'seguranca',
+          action: 'Senha atualizada',
+        })
+      } catch (e) {
+        if (e instanceof AuthRequestError && e.status === 401) {
+          return
+        }
+        if (e instanceof AuthRequestError && e.status === 400) {
+          const msg = e.message.toLowerCase()
+          if (msg.includes('senha atual') || msg.includes('incorreta')) {
+            senhaForm.setError('currentPassword', {
+              type: 'manual',
+              message: e.message,
+            })
+            return
+          }
+          if (msg.includes('diferente')) {
+            senhaForm.setError('newPassword', {
+              type: 'manual',
+              message: e.message,
+            })
+            return
+          }
+          toast.error('Não foi possível atualizar a senha', { description: e.message })
+          return
+        }
+        toast.error('Não foi possível atualizar a senha', {
+          description: 'Tente novamente dentro de instantes.',
+        })
+      }
+      return
+    }
+
     const esperada = lerSenhaArmazenadaLocal()
     if (values.currentPassword !== esperada) {
       senhaForm.setError('currentPassword', {
@@ -197,7 +248,11 @@ export function ConfiguracoesSegurancaPage() {
   }
 
   const { errors: prefsErrors, isDirty: prefsDirty } = prefsForm.formState
-  const { errors: senhaErrors, isDirty: senhaDirty } = senhaForm.formState
+  const {
+    errors: senhaErrors,
+    isDirty: senhaDirty,
+    isSubmitting: senhaSubmitting,
+  } = senhaForm.formState
 
   const lockHint = lockHintByValue[lockPreview] ?? lockHintByValue['30']
 
@@ -213,12 +268,12 @@ export function ConfiguracoesSegurancaPage() {
               Segurança
             </h1>
             <span className="text-muted-foreground bg-muted/50 border-border/50 inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase sm:text-[11px]">
-              Armazenamento local
+              Senha na API · bloqueio local
             </span>
           </div>
           <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
-            Defina quando o painel deve pedir login novamente e atualize a senha deste navegador. Em
-            produção, tudo abaixo passará pela API da organização.
+            Defina quando o painel deve pedir login novamente e atualize a senha deste navegador.             A alteração de senha usa a API quando está autenticado; bloqueio por inatividade continua em preferência
+            local neste dispositivo.
           </p>
         </div>
       </header>
@@ -349,27 +404,35 @@ export function ConfiguracoesSegurancaPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setDemoOpen((o) => !o)}
-            aria-expanded={demoOpen}
-            className="text-muted-foreground hover:text-foreground hover:bg-muted/40 mb-4 flex w-full items-center gap-2 rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-left text-xs transition-colors"
-          >
-            <ChevronDownIcon
-              className={cn('size-3.5 shrink-0 transition-transform', demoOpen && 'rotate-180')}
-              aria-hidden
-            />
-            <span className="font-medium">Modo demonstração — como a senha funciona aqui</span>
-          </button>
-          {demoOpen ? (
-            <div className="text-muted-foreground border-border/50 -mt-2 mb-4 rounded-lg border border-dashed px-3 py-2.5 text-[11px] leading-relaxed sm:text-xs">
-              Sem backend, a verificação usa só este navegador. Senha inicial:{' '}
-              <code className="bg-muted/60 text-foreground rounded px-1 py-0.5 font-mono text-[11px]">
-                {SENHA_ATUAL_PADRAO}
-              </code>
-              . Depois da primeira troca, use sempre a senha que você gravou aqui.
-            </div>
-          ) : null}
+          {!isAuthenticated ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setDemoOpen((o) => !o)}
+                aria-expanded={demoOpen}
+                className="text-muted-foreground hover:text-foreground hover:bg-muted/40 mb-4 flex w-full items-center gap-2 rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-left text-xs transition-colors"
+              >
+                <ChevronDownIcon
+                  className={cn('size-3.5 shrink-0 transition-transform', demoOpen && 'rotate-180')}
+                  aria-hidden
+                />
+                <span className="font-medium">Modo demonstração — como a senha funciona aqui</span>
+              </button>
+              {demoOpen ? (
+                <div className="text-muted-foreground border-border/50 -mt-2 mb-4 rounded-lg border border-dashed px-3 py-2.5 text-[11px] leading-relaxed sm:text-xs">
+                  Sem sessão na API, a verificação usa só este navegador. Senha inicial:{' '}
+                  <code className="bg-muted/60 text-foreground rounded px-1 py-0.5 font-mono text-[11px]">
+                    {SENHA_ATUAL_PADRAO}
+                  </code>
+                  . Depois da primeira troca, use sempre a senha que você gravou aqui.
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="text-muted-foreground mb-4 rounded-lg border border-border/40 bg-muted/15 px-3 py-2 text-[11px] leading-relaxed sm:text-xs">
+              A senha atual é validada no servidor. Use a mesma palavra-passe com que entra na SentinelIA.
+            </p>
+          )}
 
           <FieldSet className="min-w-0 gap-0 border-0 p-0">
             <FieldGroup className="gap-5">
@@ -535,7 +598,7 @@ export function ConfiguracoesSegurancaPage() {
             >
               Esqueci minha senha
             </Link>{' '}
-            <span className="hidden sm:inline">— envio por e-mail quando o backend estiver ativo.</span>
+            <span className="hidden sm:inline">— envio por e-mail.</span>
           </p>
 
           <div className="border-border/40 mt-5 flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
@@ -545,13 +608,18 @@ export function ConfiguracoesSegurancaPage() {
               size="sm"
               className="text-muted-foreground h-9 gap-1.5 text-xs"
               onClick={onCancelSenha}
-              disabled={!senhaDirty}
+              disabled={!senhaDirty || senhaSubmitting}
             >
               <XIcon className="size-3.5 shrink-0 opacity-90" aria-hidden />
               Cancelar
             </Button>
-            <Button type="submit" size="sm" className="h-9 gap-1.5 px-4 font-medium sm:min-w-[148px]">
-              <span>Atualizar senha</span>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={senhaSubmitting}
+              className="h-9 gap-1.5 px-4 font-medium sm:min-w-[148px]"
+            >
+              <span>{senhaSubmitting ? 'A atualizar…' : 'Atualizar senha'}</span>
               <ChevronRightIcon className="size-3.5 opacity-90" aria-hidden />
             </Button>
           </div>
