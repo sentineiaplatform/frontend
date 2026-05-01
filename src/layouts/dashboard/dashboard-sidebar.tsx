@@ -33,6 +33,7 @@ import {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import {
   navItemButtonClass,
@@ -83,6 +84,8 @@ const dadosMestresSub = [
 export function DashboardSidebar() {
   const { pathname } = useLocation()
   const { theme, setTheme, resolvedTheme } = useTheme()
+  const { state: sidebarState, setOpen: setSidebarOpen } = useSidebar()
+  const [dadosMestresOpen, setDadosMestresOpen] = useState(true)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -164,19 +167,34 @@ export function DashboardSidebar() {
           <SidebarGroup className="p-0">
             <SidebarMenu className="gap-0.5">
               <SidebarMenuItem>
-                <Collapsible defaultOpen className="group w-full min-w-0">
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton
-                      tooltip="Dados Mestres"
-                      isActive={false}
-                      type="button"
-                      className={cn(navItemButtonClass(false), 'pr-3.5')}
-                    >
-                      <DatabaseIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
-                      <span>Dados Mestres</span>
-                      <ChevronDownIcon className={parentNavChevronClass} aria-hidden />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
+                <Collapsible
+                  open={dadosMestresOpen}
+                  onOpenChange={setDadosMestresOpen}
+                  className="group w-full min-w-0"
+                >
+                  <div
+                    className="w-full min-w-0"
+                    onClickCapture={(e) => {
+                      if (sidebarState !== 'collapsed') return
+                      setSidebarOpen(true)
+                      setDadosMestresOpen(true)
+                      e.preventDefault()
+                      e.stopPropagation()
+                    }}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        tooltip="Dados Mestres"
+                        isActive={false}
+                        type="button"
+                        className={cn(navItemButtonClass(false), 'pr-3.5')}
+                      >
+                        <DatabaseIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
+                        <span>Dados Mestres</span>
+                        <ChevronDownIcon className={parentNavChevronClass} aria-hidden />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                  </div>
                   <CollapsibleContent>
                     <SidebarMenuSub className="mx-0 ml-2.5 gap-0 px-2.5 pr-1.5 py-0.5 [&_[data-sidebar=menu-sub-item]]:before:bg-white/25 [&_[data-sidebar=menu-sub-item]]:after:bg-white/25">
                       {dadosMestresSub.map((sub) => {
