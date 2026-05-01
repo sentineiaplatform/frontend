@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
@@ -27,6 +28,7 @@ import {
   AUTH_INPUT_GROUP_CONTROL_CLASS,
 } from '@/lib/auth-matched-input-group'
 import { cn } from '@/lib/utils'
+import { requestForgotPassword } from '@/services/auth/forgot-password-request'
 
 type Props = {
   readonly className?: string
@@ -37,6 +39,7 @@ export function ForgotPasswordForm({ className }: Props) {
   const ids = useId()
   const emailId = `${ids}-email`
   const [sent, setSent] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const {
     register,
@@ -48,9 +51,17 @@ export function ForgotPasswordForm({ className }: Props) {
     mode: 'onTouched',
   })
 
-  function onSubmit(_values: ForgotPasswordFormValues) {
-    // Integração backend em etapa seguinte
-    setSent(true)
+  async function onSubmit(values: ForgotPasswordFormValues) {
+    setSubmitting(true)
+    try {
+      await requestForgotPassword(values.email)
+      setSent(true)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Erro ao enviar pedido.'
+      toast.error(msg)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -131,8 +142,13 @@ export function ForgotPasswordForm({ className }: Props) {
               </Field>
             </FieldGroup>
 
-            <Button type="submit" size="lg" className="h-11 w-full gap-2 shadow-sm">
-              Enviar link de recuperação
+            <Button
+              type="submit"
+              size="lg"
+              className="h-11 w-full gap-2 shadow-sm"
+              disabled={submitting}
+            >
+              {submitting ? 'A enviar…' : 'Enviar link de recuperação'}
               <ArrowRightIcon className="size-4 shrink-0" aria-hidden />
             </Button>
           </form>
