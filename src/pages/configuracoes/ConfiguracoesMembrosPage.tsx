@@ -37,6 +37,7 @@ import {
   fetchUsersList,
   type UserListItemDto,
 } from '@/services/user-profile-service'
+import { ConvidarMembroModal } from '@/pages/configuracoes/ConvidarMembroModal'
 import { configuracoesPageShellClass } from '@/pages/configuracoes/configuracoes-layout'
 import {
   CabecalhoColuna,
@@ -61,10 +62,27 @@ export function ConfiguracoesMembrosPage() {
   const [pagina, setPagina] = useState(1)
   const [itensPorPagina, setItensPorPagina] = useState(20)
   const [busca, setBusca] = useState('')
+  const [convidarAberto, setConvidarAberto] = useState(false)
+
+  const recarregarMembros = async () => {
+    setLoading(true)
+    setFetchError(null)
+    try {
+      const list = await fetchUsersList()
+      setMembros(list)
+    } catch (e) {
+      const msg = membrosErrorMessage(e)
+      setMembros([])
+      setFetchError(msg)
+      toast.error(msg)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
-    async function load() {
+    void (async () => {
       setLoading(true)
       setFetchError(null)
       try {
@@ -80,8 +98,7 @@ export function ConfiguracoesMembrosPage() {
       } finally {
         if (!cancelled) setLoading(false)
       }
-    }
-    void load()
+    })()
     return () => {
       cancelled = true
     }
@@ -151,14 +168,18 @@ export function ConfiguracoesMembrosPage() {
             variant="default"
             size="sm"
             className="h-9 gap-1.5 rounded-lg px-3"
-            disabled
-            title="Convites por API ainda não estão disponíveis no servidor."
-            aria-disabled
+            onClick={() => setConvidarAberto(true)}
           >
             <UserPlusIcon className="size-3.5" strokeWidth={2} aria-hidden />
             Convidar membro
           </Button>
         </RegistrosPageHeader>
+
+        <ConvidarMembroModal
+          open={convidarAberto}
+          onOpenChange={setConvidarAberto}
+          onCreated={() => void recarregarMembros()}
+        />
 
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between sm:gap-2 sm:overflow-x-auto md:gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap md:min-h-10 md:flex-1 md:min-w-0">

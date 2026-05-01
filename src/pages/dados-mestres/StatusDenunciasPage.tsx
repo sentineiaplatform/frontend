@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react'
 
+import { useConfirmDialog } from '@/components/dialogs/confirm-dialog-context'
 import { RegistrosListaPaginada, RegistrosPageHeader } from '@/components/registros'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -88,6 +89,7 @@ function exportarCsvStatus(linhas: StatusDenunciaMock[]) {
 
 /** Dados mestres — status de denúncia (listagem no padrão da tela de Denúncias). */
 export function StatusDenunciasPage() {
+  const { confirm } = useConfirmDialog()
   const navigate = useNavigate()
   const [registros, setRegistros] = useState<StatusDenunciaMock[]>([])
   const [carregando, setCarregando] = useState(true)
@@ -185,6 +187,42 @@ export function StatusDenunciasPage() {
   }
 
   const limparSelecao = () => setSelecao(new Set())
+
+  const alternarAtivoLinha = useCallback(
+    async (r: StatusDenunciaMock) => {
+      const proxima = !r.ativo
+      if (!proxima) {
+        const ok = await confirm({
+          title: `Inativar o status "${r.nome}"?`,
+          description: 'Permanece disponível para histórico.',
+          variant: 'destructive',
+        })
+        if (!ok) return
+      }
+      void updateComplaintStatus(r.id, {
+        name: r.nome,
+        description: r.descricao || null,
+        active: proxima,
+      }).then(
+        () => {
+          toast.success(proxima ? 'Status ativado.' : 'Status inativado.')
+          void carregarLista()
+          setSelecao((prev) => {
+            const next = new Set(prev)
+            next.delete(r.id)
+            return next
+          })
+        },
+        () =>
+          toast.error(
+            proxima
+              ? 'Não foi possível ativar o status.'
+              : 'Não foi possível inativar o status.',
+          ),
+      )
+    },
+    [carregarLista, confirm],
+  )
 
   const registrosSelecionados = useMemo(
     () => registros.filter((r) => selecao.has(r.id)),
@@ -354,37 +392,37 @@ export function StatusDenunciasPage() {
                   aria-label={
                     algumAtivoNaSelecao ? 'Inativar selecionados' : 'Ativar selecionados'
                   }
-                  onClick={() => {
+                  onClick={async () => {
                     const proxima = !algumAtivoNaSelecao
-                    if (
-                      !window.confirm(
-                        proxima
-                          ? `Ativar ${qtdSelecionados} status selecionado(s)?`
-                          : `Inativar ${qtdSelecionados} status selecionado(s)? Permanecem no histórico.`,
+                    const ok = await confirm(
+                      proxima
+                        ? {
+                            title: `Ativar ${qtdSelecionados} status selecionado(s)?`,
+                            variant: 'default',
+                          }
+                        : {
+                            title: `Inativar ${qtdSelecionados} status selecionado(s)?`,
+                            description: 'Permanecem no histórico.',
+                            variant: 'destructive',
+                          },
+                    )
+                    if (!ok) return
+                    try {
+                      await Promise.all(
+                        registrosSelecionados.map((r) =>
+                          updateComplaintStatus(r.id, {
+                            name: r.nome,
+                            description: r.descricao || null,
+                            active: proxima,
+                          }),
+                        ),
                       )
-                    ) {
-                      return
+                      toast.success(proxima ? 'Status ativados.' : 'Status inativados.')
+                      void carregarLista()
+                      limparSelecao()
+                    } catch {
+                      toast.error('Não foi possível atualizar a seleção.')
                     }
-                    void (async () => {
-                      try {
-                        await Promise.all(
-                          registrosSelecionados.map((r) =>
-                            updateComplaintStatus(r.id, {
-                              name: r.nome,
-                              description: r.descricao || null,
-                              active: proxima,
-                            }),
-                          ),
-                        )
-                        toast.success(
-                          proxima ? 'Status ativados.' : 'Status inativados.',
-                        )
-                        void carregarLista()
-                        limparSelecao()
-                      } catch {
-                        toast.error('Não foi possível atualizar a seleção.')
-                      }
-                    })()
                   }}
                 >
                   {algumAtivoNaSelecao ? (
@@ -572,38 +610,7 @@ export function StatusDenunciasPage() {
                                   : 'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
                               )}
                               aria-label={r.ativo ? `Inativar ${r.nome}` : `Ativar ${r.nome}`}
-                              onClick={() => {
-                                const proxima = !r.ativo
-                                if (
-                                  !proxima &&
-                                  !window.confirm(
-                                    `Inativar o status "${r.nome}"? Permanece disponível para histórico.`,
-                                  )
-                                ) {
-                                  return
-                                }
-                                void updateComplaintStatus(r.id, {
-                                  name: r.nome,
-                                  description: r.descricao || null,
-                                  active: proxima,
-                                }).then(
-                                  () => {
-                                    toast.success(proxima ? 'Status ativado.' : 'Status inativado.')
-                                    void carregarLista()
-                                    setSelecao((prev) => {
-                                      const next = new Set(prev)
-                                      next.delete(r.id)
-                                      return next
-                                    })
-                                  },
-                                  () =>
-                                    toast.error(
-                                      proxima
-                                        ? 'Não foi possível ativar o status.'
-                                        : 'Não foi possível inativar o status.',
-                                    ),
-                                )
-                              }}
+                              onClick={() => void alternarAtivoLinha(r)}
                             >
                               {r.ativo ? (
                                 <CircleSlash className="size-4 shrink-0" strokeWidth={2} aria-hidden />

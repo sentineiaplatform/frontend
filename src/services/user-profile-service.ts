@@ -69,6 +69,37 @@ export async function fetchCurrentUserProfile(): Promise<UserProfileDto> {
   return res.json() as Promise<UserProfileDto>
 }
 
+export type CreateUserBody = {
+  name: string
+  email: string
+  password: string
+}
+
+/** `POST /api/users` — registo / criação de conta (resposta sem palavra-passe). */
+export async function createUser(body: CreateUserBody): Promise<UserListItemDto> {
+  let res: Response
+  try {
+    res = await authorizedFetch('/api/users', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: body.name.trim(),
+        email: body.email.trim().toLowerCase(),
+        password: body.password,
+      }),
+    })
+  } catch {
+    throw new AuthRequestError(AUTH_MSG_SERVICO_INDISPONIVEL, 0)
+  }
+  if (!res.ok) {
+    throw new AuthRequestError(await parseErrorMessage(res), res.status)
+  }
+  return res.json() as Promise<UserListItemDto>
+}
+
 export async function patchCurrentUserProfile(body: {
   name: string
   email: string

@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react'
 
+import { useConfirmDialog } from '@/components/dialogs/confirm-dialog-context'
 import { RegistrosListaPaginada, RegistrosPageHeader } from '@/components/registros'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -95,6 +96,7 @@ function exportarCsvCategorias(linhas: CategoriaDenunciaMock[]) {
 
 /** Dados mestres — categorias de denúncia (listagem no padrão da tela de Denúncias). */
 export function CategoriaDenunciasPage() {
+  const { confirm } = useConfirmDialog()
   const navigate = useNavigate()
   const [registros, setRegistros] = useState<CategoriaDenunciaMock[]>([])
   const [carregando, setCarregando] = useState(true)
@@ -194,40 +196,43 @@ export function CategoriaDenunciasPage() {
 
   const limparSelecao = () => setSelecao(new Set())
 
-  const alternarAtivoLinha = (r: CategoriaDenunciaMock) => {
-    const nextActive = !r.ativo
-    if (
-      !nextActive &&
-      !window.confirm(
-        `Inativar a categoria "${r.nome}"? Permanece disponível para histórico.`,
-      )
-    ) {
-      return
-    }
-    void updateComplaintCategory(r.id, {
-      name: r.nome,
-      description: r.descricao || null,
-      slaDays: r.slaDias,
-      active: nextActive,
-    }).then(
-      () => {
-        toast.success(nextActive ? 'Categoria ativada.' : 'Categoria inativada.')
-        void carregarLista()
-        setSelecao((prev) => {
-          const next = new Set(prev)
-          next.delete(r.id)
-          return next
+  const alternarAtivoLinha = useCallback(
+    async (r: CategoriaDenunciaMock) => {
+      const nextActive = !r.ativo
+      if (!nextActive) {
+        const ok = await confirm({
+          title: `Inativar a categoria "${r.nome}"?`,
+          description: 'Permanece disponível para histórico.',
+          variant: 'destructive',
         })
-      },
-      () => {
-        toast.error(
-          nextActive
-            ? 'Não foi possível ativar a categoria.'
-            : 'Não foi possível inativar a categoria.',
-        )
-      },
-    )
-  }
+        if (!ok) return
+      }
+      void updateComplaintCategory(r.id, {
+        name: r.nome,
+        description: r.descricao || null,
+        slaDays: r.slaDias,
+        active: nextActive,
+      }).then(
+        () => {
+          toast.success(nextActive ? 'Categoria ativada.' : 'Categoria inativada.')
+          void carregarLista()
+          setSelecao((prev) => {
+            const next = new Set(prev)
+            next.delete(r.id)
+            return next
+          })
+        },
+        () => {
+          toast.error(
+            nextActive
+              ? 'Não foi possível ativar a categoria.'
+              : 'Não foi possível inativar a categoria.',
+          )
+        },
+      )
+    },
+    [carregarLista, confirm],
+  )
 
   const registrosSelecionados = useMemo(
     () => registros.filter((r) => selecao.has(r.id)),
@@ -397,38 +402,39 @@ export function CategoriaDenunciasPage() {
                   aria-label={
                     algumAtivoNaSelecao ? 'Inativar selecionados' : 'Ativar selecionados'
                   }
-                  onClick={() => {
+                  onClick={async () => {
                     const proxima = !algumAtivoNaSelecao
-                    if (
-                      !window.confirm(
-                        proxima
-                          ? `Ativar ${qtdSelecionados} categoria(s) selecionada(s)?`
-                          : `Inativar ${qtdSelecionados} categoria(s) selecionada(s)? Elas deixarão de aparecer como ativas nas seleções.`,
+                    const ok = await confirm(
+                      proxima
+                        ? {
+                            title: `Ativar ${qtdSelecionados} categoria(s) selecionada(s)?`,
+                            variant: 'default',
+                          }
+                        : {
+                            title: `Inativar ${qtdSelecionados} categoria(s) selecionada(s)?`,
+                            description:
+                              'Elas deixarão de aparecer como ativas nas seleções.',
+                            variant: 'destructive',
+                          },
+                    )
+                    if (!ok) return
+                    try {
+                      await Promise.all(
+                        registrosSelecionados.map((r) =>
+                          updateComplaintCategory(r.id, {
+                            name: r.nome,
+                            description: r.descricao || null,
+                            slaDays: r.slaDias,
+                            active: proxima,
+                          }),
+                        ),
                       )
-                    ) {
-                      return
+                      toast.success(proxima ? 'Categorias ativadas.' : 'Categorias inativadas.')
+                      void carregarLista()
+                      limparSelecao()
+                    } catch {
+                      toast.error('Não foi possível atualizar a seleção.')
                     }
-                    void (async () => {
-                      try {
-                        await Promise.all(
-                          registrosSelecionados.map((r) =>
-                            updateComplaintCategory(r.id, {
-                              name: r.nome,
-                              description: r.descricao || null,
-                              slaDays: r.slaDias,
-                              active: proxima,
-                            }),
-                          ),
-                        )
-                        toast.success(
-                          proxima ? 'Categorias ativadas.' : 'Categorias inativadas.',
-                        )
-                        void carregarLista()
-                        limparSelecao()
-                      } catch {
-                        toast.error('Não foi possível atualizar a seleção.')
-                      }
-                    })()
                   }}
                 >
                   {algumAtivoNaSelecao ? (
