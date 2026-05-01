@@ -139,7 +139,12 @@ export function ConfiguracoesPerfilPage() {
     formState: { errors, isDirty, isSubmitting },
   } = useForm<PerfilFormValues>({
     resolver: zodResolver(perfilFormSchema),
-    defaultValues,
+    /** Início vazio; depois do fetch aplicamos `reset()` síncrono em `loadProfile` para não haver 1.º paint com `perfilId` vazio (antes do `useEffect`). */
+    defaultValues: {
+      fullName: '',
+      email: '',
+      perfilId: '',
+    },
   })
 
   const loadProfileGeneration = useRef(0)
@@ -166,12 +171,21 @@ export function ConfiguracoesPerfilPage() {
       ])
       if (gen !== loadProfileGeneration.current) return
       const perfilIdNorm = normalizePerfilId(String(p.perfilId))
-      setOpcoesPerfil(buildOpcoesPerfil(perfisList, perfilIdNorm, p.perfilName))
+      const opts = buildOpcoesPerfil(perfisList, perfilIdNorm, p.perfilName)
+      setOpcoesPerfil(opts)
       setLoadedProfile({
         name: p.name,
         email: p.email,
         perfilId: perfilIdNorm,
       })
+      reset(
+        {
+          fullName: p.name,
+          email: p.email,
+          perfilId: perfilIdNorm,
+        },
+        { keepDefaultValues: false },
+      )
       setSessionDisplayName(p.name.trim())
     } catch (e) {
       if (e instanceof AuthRequestError && e.status === 401) {
@@ -200,8 +214,17 @@ export function ConfiguracoesPerfilPage() {
         perfisFallback = []
       }
       if (gen !== loadProfileGeneration.current) return
-      setOpcoesPerfil(buildOpcoesPerfil(perfisFallback, fallbackPerfilId, ''))
+      const fallbackOpts = buildOpcoesPerfil(perfisFallback, fallbackPerfilId, '')
+      setOpcoesPerfil(fallbackOpts)
       setLoadedProfile({ name: nome, email, perfilId: fallbackPerfilId })
+      reset(
+        {
+          fullName: nome,
+          email,
+          perfilId: fallbackPerfilId,
+        },
+        { keepDefaultValues: false },
+      )
       const description =
         e instanceof AuthRequestError ? e.message : 'Tente novamente dentro de instantes.'
       toast.error('Não foi possível carregar o perfil', { description })
@@ -210,7 +233,7 @@ export function ConfiguracoesPerfilPage() {
         setProfileLoading(false)
       }
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, reset])
 
   useEffect(() => {
     if (!isReady) return
@@ -220,11 +243,7 @@ export function ConfiguracoesPerfilPage() {
     return () => window.clearTimeout(handle)
   }, [isReady, loadProfile])
 
-  useEffect(() => {
-    reset(defaultValues)
-  }, [defaultValues, reset])
-
-  /** Radix Select só mostra o rótulo quando o valor coincide com um `SelectItem`; re-aplica após opções existirem. */
+  /** Radix Select: reforço caso `values`/`reset` e a lista de opções não alinhem no mesmo frame. */
   useEffect(() => {
     const pid = loadedProfile?.perfilId?.trim()
     if (!pid || opcoesPerfil.length === 0) return
@@ -443,6 +462,7 @@ export function ConfiguracoesPerfilPage() {
                       <CircleUserRoundIcon className="size-4 shrink-0" aria-hidden />
                     </InputGroupAddon>
                     <Select
+                      key={`perfil-org-${field.value.length > 0 ? field.value : 'empty'}-${opcoesPerfil.length}`}
                       value={field.value.length > 0 ? field.value : undefined}
                       onValueChange={field.onChange}
                     >
@@ -466,10 +486,6 @@ export function ConfiguracoesPerfilPage() {
                   </InputGroup>
                 )}
               />
-              <p className="text-muted-foreground mt-1.5 max-w-xl text-xs leading-snug">
-                Define o papel na organização. Permissões por módulo em{' '}
-                <span className="text-foreground/85">Configurações → Permissões</span>.
-              </p>
               {errors.perfilId ? (
                 <FieldError className="flex items-start gap-2 [&>svg]:shrink-0">
                   <AlertCircleIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
