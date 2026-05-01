@@ -3,6 +3,7 @@ import {
   KeyRoundIcon,
   ListChecksIcon,
   ListXIcon,
+  Loader2Icon,
   SearchIcon,
   ShieldIcon,
   XIcon,
@@ -11,6 +12,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { RegistrosPageHeader } from '@/components/registros'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -156,9 +158,9 @@ function buildFilasVisiveis(query: string): FilinhaVisivel[] {
   return out
 }
 
-/** Matriz módulo × ação × perfil (colunas dinâmicas a partir de Perfis). */
+/** Matriz módulo × ação × perfil — colunas dinâmicas de `GET /api/perfis` via `useConfigPerfis`. */
 export function ConfiguracoesPermissoesPage() {
-  const { perfis, ids } = useConfigPerfis()
+  const { perfis, ids, loading, loadError, refresh } = useConfigPerfis()
   const [busca, setBusca] = useState('')
   const [filtroColunasPerfil, setFiltroColunasPerfil] = useState<'todos' | string>('todos')
 
@@ -298,6 +300,8 @@ export function ConfiguracoesPermissoesPage() {
 
   const colSpanVazio = 2 + Math.max(1, perfisColunas.length)
 
+  const matrizPronta = !loading && loadError == null && perfis.length > 0
+
   return (
     <div className={configuracoesPageShellClass}>
       <div className="flex flex-col gap-4 md:gap-5">
@@ -309,7 +313,7 @@ export function ConfiguracoesPermissoesPage() {
               </span>
               <span>Permissões</span>
               <span className="text-muted-foreground bg-muted/50 border-border/50 hidden items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase sm:inline-flex sm:text-[11px]">
-                Módulos · CRUD · rascunho local
+                Módulos · CRUD · API + rascunho local
               </span>
             </span>
           }
@@ -324,18 +328,64 @@ export function ConfiguracoesPermissoesPage() {
               >
                 Perfis
               </Link>{' '}
-              (incluindo os que criares); novos perfis começam sem permissões até marcares as células.
+              (incluindo os que criares); novos perfis começam sem permissões até marcares as células. As colunas são
+              carregadas de <strong className="font-medium text-foreground">GET /api/perfis</strong>.
             </>
           }
         >
-          <Button type="button" variant="outline" size="sm" className="h-9 rounded-lg px-3" onClick={onRestaurar}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 rounded-lg px-3"
+            disabled={!matrizPronta}
+            onClick={onRestaurar}
+          >
             Repor modelo
           </Button>
-          <Button type="button" size="sm" className="h-9 rounded-lg px-3" onClick={onGuardar}>
+          <Button type="button" size="sm" className="h-9 rounded-lg px-3" disabled={!matrizPronta} onClick={onGuardar}>
             Guardar rascunho
           </Button>
         </RegistrosPageHeader>
 
+        {loadError ? (
+          <Alert variant="destructive">
+            <AlertTitle>Não foi possível carregar os perfis</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>{loadError}</span>
+              <Button type="button" size="sm" variant="secondary" className="shrink-0 self-start sm:self-auto" onClick={() => void refresh()}>
+                Tentar novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {loading ? (
+          <div
+            className="border-border/40 bg-muted/20 text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-16 text-sm"
+            aria-busy
+            aria-live="polite"
+          >
+            <Loader2Icon className="text-primary size-8 animate-spin" aria-hidden />
+            <p>A carregar perfis da organização…</p>
+          </div>
+        ) : null}
+
+        {!loading && loadError == null && perfis.length === 0 ? (
+          <Alert>
+            <AlertTitle>Nenhum perfil definido</AlertTitle>
+            <AlertDescription>
+              Crie perfis na organização para montar as colunas desta matriz.{' '}
+              <Link to="/app/configuracoes/perfis" className="text-primary font-medium underline-offset-4 hover:underline">
+                Ir para Perfis
+              </Link>
+              .
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {matrizPronta ? (
+          <>
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border/40 pb-3 text-[11px] md:text-xs">
           <span className="inline-flex items-center gap-1">
             <Badge variant="outline" className="font-mono px-1 py-0 text-[10px]" title="Criar">
@@ -585,6 +635,8 @@ export function ConfiguracoesPermissoesPage() {
             </p>
           </footer>
         </div>
+          </>
+        ) : null}
       </div>
     </div>
   )
