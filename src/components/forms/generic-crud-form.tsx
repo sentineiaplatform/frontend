@@ -1,5 +1,10 @@
 import type { LucideIcon } from 'lucide-react'
-import type { ComponentProps } from 'react'
+import {
+  cloneElement,
+  forwardRef,
+  type ComponentProps,
+  type ReactElement,
+} from 'react'
 import { AlertCircleIcon, ChevronRightIcon, XIcon } from 'lucide-react'
 import { Controller, type FieldErrors, type FieldValues, type Path, type UseFormReturn } from 'react-hook-form'
 
@@ -23,7 +28,9 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
+  FieldLabelRow,
   FieldSet,
+  useFieldHintId,
 } from '@/components/ui/field'
 import {
   InputGroup,
@@ -57,6 +64,8 @@ type CrudFieldBase<T extends FieldValues> = {
   name: Path<T>
   label: string
   description?: string
+  /** Rótulo curto do botão «?» da dica (acessibilidade); só usado quando há `description`. */
+  descriptionAriaLabel?: string
   /** Ícone à esquerda (mesmo padrão de login / configurações). */
   icon?: LucideIcon
   /**
@@ -64,6 +73,16 @@ type CrudFieldBase<T extends FieldValues> = {
    * Se omitido, `textarea` assume linha inteira; demais ficam em uma célula.
    */
   fullRow?: boolean
+  /**
+   * Ocupa toda a largura da grade atual (`sm:col-span-2` ou `lg:col-span-3` conforme `fieldColumns`).
+   * Útil para um único campo “solto” na primeira linha em modal 2/3 colunas.
+   */
+  fullWidth?: boolean
+  /**
+   * Colunas da grade CSS a ocupar (só afeta `fieldColumns` 2 ou 3).
+   * `2` em grade de 3 colunas = duas células em `lg`; `3` = linha inteira.
+   */
+  colSpan?: 1 | 2 | 3
 }
 
 type CrudTextField<T extends FieldValues> =
@@ -142,6 +161,54 @@ function getFieldErrorMessage<T extends FieldValues>(
   return typeof raw?.message === 'string' ? raw.message : undefined
 }
 
+function mergeAriaDescribedBy(
+  hintId: string | undefined,
+  existing?: string,
+): string | undefined {
+  const raw = [hintId, existing].filter(Boolean).join(' ').trim()
+  if (!raw) return undefined
+  return [...new Set(raw.split(/\s+/).filter(Boolean))].join(' ')
+}
+
+function CrudFieldHintAria({
+  children,
+}: {
+  children: ReactElement<{ 'aria-describedby'?: string }>
+}) {
+  const hintId = useFieldHintId()
+  return cloneElement(children, {
+    'aria-describedby': mergeAriaDescribedBy(hintId ?? undefined, children.props['aria-describedby']),
+  })
+}
+
+/** Para `PopoverTrigger asChild`: precisa repassar ref ao botão e mesclar o hint do campo. */
+const CrudPopoverFormTrigger = forwardRef<
+  HTMLButtonElement,
+  ComponentProps<typeof Button>
+>(function CrudPopoverFormTrigger(props, ref) {
+  const hintId = useFieldHintId()
+  const { 'aria-describedby': ariaDescribedBy, ...rest } = props
+  return (
+    <Button
+      ref={ref}
+      {...rest}
+      aria-describedby={mergeAriaDescribedBy(hintId ?? undefined, ariaDescribedBy)}
+    />
+  )
+})
+
+function LexKitRichTextFieldWithFieldHint(
+  props: ComponentProps<typeof LexKitRichTextField>,
+) {
+  const hintId = useFieldHintId()
+  return (
+    <LexKitRichTextField
+      {...props}
+      aria-describedby={mergeAriaDescribedBy(hintId ?? undefined, props['aria-describedby'])}
+    />
+  )
+}
+
 const DATETIME_LOCAL_TOKEN = "yyyy-MM-dd'T'HH:mm" as const
 
 function parseDatetimeLocalString(raw: string): Date | undefined {
@@ -179,8 +246,9 @@ function mergeTimeIntoDatetimeLocal(current: string, timeHHmm: string): string {
 
 function fieldGroupGridClass(columns: CrudFormFieldColumns) {
   if (columns === 1) return 'flex flex-col gap-4'
-  if (columns === 2) return 'grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-4'
-  return 'grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-4 lg:grid-cols-3 lg:gap-x-4'
+  if (columns === 2)
+    return 'grid grid-cols-1 gap-4 sm:grid-cols-[repeat(2,minmax(0,1fr))] sm:gap-x-4 sm:gap-y-4'
+  return 'grid grid-cols-1 gap-4 sm:grid-cols-[repeat(2,minmax(0,1fr))] sm:gap-x-4 sm:gap-y-4 lg:grid-cols-[repeat(3,minmax(0,1fr))] lg:gap-x-4'
 }
 
 function fieldCellClass(
@@ -200,6 +268,30 @@ function isFullRowField(
   if (columns === 1) return false
   if (field.fullRow !== undefined) return field.fullRow
   return field.type === 'textarea' || field.type === 'richtext'
+}
+
+/** Classes `col-span-*` no `Field` para grades 2 ou 3 colunas. */
+function fieldGridColClass(
+  columns: CrudFormFieldColumns,
+  field: CrudFormField<FieldValues>,
+): string | undefined {
+  if (columns === 1) return undefined
+
+  if (field.colSpan !== undefined) {
+    const s = field.colSpan
+    if (s <= 1) return undefined
+    if (columns === 2) return 'sm:col-span-2'
+    if (s === 2) return 'sm:col-span-2 lg:col-span-2'
+    return 'sm:col-span-2 lg:col-span-3'
+  }
+
+  if (field.fullWidth) {
+    if (columns === 2) return 'sm:col-span-2'
+    return 'sm:col-span-2 lg:col-span-3'
+  }
+
+  const fullRow = isFullRowField(field, columns)
+  return fieldCellClass(columns, fullRow)
 }
 
 function dialogMaxClass(columns: CrudFormFieldColumns) {
@@ -329,8 +421,7 @@ function GenericCrudFormContent<T extends FieldValues>({
             const errorMessage = getFieldErrorMessage(errors, field.name)
             const fieldId = String(field.name)
             const Icon = field.icon
-            const fullRow = isFullRowField(field, fieldColumns)
-            const cellClass = fieldCellClass(fieldColumns, fullRow)
+            const cellClass = fieldGridColClass(fieldColumns, field)
 
             if (field.type === 'richtext') {
               return (
@@ -339,22 +430,34 @@ function GenericCrudFormContent<T extends FieldValues>({
                   className={cellClass}
                   data-invalid={errorMessage ? true : undefined}
                 >
-                  <div className="flex items-center gap-2">
-                    {Icon ? (
-                      <Icon className="text-muted-foreground size-4 shrink-0" aria-hidden />
-                    ) : null}
-                    <FieldLabel htmlFor={fieldId} className="text-sm font-medium">
-                      {field.label}
+                  <FieldLabelRow>
+                    <FieldLabel
+                      htmlFor={fieldId}
+                      className="!block !h-auto !w-full !min-w-0 !max-w-full !gap-0 !leading-snug !font-normal text-foreground"
+                    >
+                      <span className="inline-flex items-baseline gap-2">
+                        {Icon ? (
+                          <Icon className="text-muted-foreground size-4 shrink-0" aria-hidden />
+                        ) : null}
+                        <span className="inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                          <span className="text-sm font-medium leading-snug">{field.label}</span>
+                          {field.description ? (
+                            <FieldDescription
+                              variant="tooltip"
+                              tooltipTriggerAriaLabel={field.descriptionAriaLabel}
+                            >
+                              {field.description}
+                            </FieldDescription>
+                          ) : null}
+                        </span>
+                      </span>
                     </FieldLabel>
-                  </div>
-                  {field.description ? (
-                    <FieldDescription>{field.description}</FieldDescription>
-                  ) : null}
+                  </FieldLabelRow>
                   <Controller
                     control={control}
                     name={field.name}
                     render={({ field: rhfField }) => (
-                      <LexKitRichTextField
+                      <LexKitRichTextFieldWithFieldHint
                         id={fieldId}
                         value={typeof rhfField.value === 'string' ? rhfField.value : ''}
                         onChange={rhfField.onChange}
@@ -377,12 +480,22 @@ function GenericCrudFormContent<T extends FieldValues>({
                   className={cellClass}
                   data-invalid={errorMessage ? true : undefined}
                 >
-                  <FieldLabel htmlFor={fieldId} className="text-sm font-medium">
-                    {field.label}
+                  <FieldLabel
+                    htmlFor={fieldId}
+                    className="!block !h-auto !w-full !min-w-0 !max-w-full !gap-0 !leading-snug !font-normal text-foreground"
+                  >
+                    <span className="inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                      <span className="text-sm font-medium leading-snug">{field.label}</span>
+                      {field.description ? (
+                        <FieldDescription
+                          variant="tooltip"
+                          tooltipTriggerAriaLabel={field.descriptionAriaLabel}
+                        >
+                          {field.description}
+                        </FieldDescription>
+                      ) : null}
+                    </span>
                   </FieldLabel>
-                  {field.description ? (
-                    <FieldDescription>{field.description}</FieldDescription>
-                  ) : null}
                   <Controller
                     control={control}
                     name={field.name}
@@ -401,7 +514,7 @@ function GenericCrudFormContent<T extends FieldValues>({
                               </InputGroupAddon>
                             ) : null}
                             <PopoverTrigger asChild>
-                              <Button
+                              <CrudPopoverFormTrigger
                                 type="button"
                                 id={fieldId}
                                 variant="ghost"
@@ -415,7 +528,7 @@ function GenericCrudFormContent<T extends FieldValues>({
                                 <span className="min-w-0 truncate">
                                   {formatDatetimeLocalDisplayPt(valueStr)}
                                 </span>
-                              </Button>
+                              </CrudPopoverFormTrigger>
                             </PopoverTrigger>
                           </InputGroup>
                           <PopoverContent
@@ -470,12 +583,22 @@ function GenericCrudFormContent<T extends FieldValues>({
                   className={cellClass}
                   data-invalid={errorMessage ? true : undefined}
                 >
-                  <FieldLabel htmlFor={fieldId} className="text-sm font-medium">
-                    {field.label}
+                  <FieldLabel
+                    htmlFor={fieldId}
+                    className="!block !h-auto !w-full !min-w-0 !max-w-full !gap-0 !leading-snug !font-normal text-foreground"
+                  >
+                    <span className="inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                      <span className="text-sm font-medium leading-snug">{field.label}</span>
+                      {field.description ? (
+                        <FieldDescription
+                          variant="tooltip"
+                          tooltipTriggerAriaLabel={field.descriptionAriaLabel}
+                        >
+                          {field.description}
+                        </FieldDescription>
+                      ) : null}
+                    </span>
                   </FieldLabel>
-                  {field.description ? (
-                    <FieldDescription>{field.description}</FieldDescription>
-                  ) : null}
                   <InputGroup
                     className={cn(
                       AUTH_INPUT_GROUP_CLASS,
@@ -490,14 +613,16 @@ function GenericCrudFormContent<T extends FieldValues>({
                         <Icon className="size-4 shrink-0" aria-hidden />
                       </InputGroupAddon>
                     ) : null}
-                    <InputGroupTextarea
-                      id={fieldId}
-                      placeholder={field.placeholder}
-                      rows={4}
-                      className={cn(AUTH_INPUT_GROUP_CONTROL_CLASS, 'min-h-[5.5rem] resize-y py-2.5')}
-                      aria-invalid={errorMessage ? 'true' : undefined}
-                      {...register(field.name)}
-                    />
+                    <CrudFieldHintAria>
+                      <InputGroupTextarea
+                        id={fieldId}
+                        placeholder={field.placeholder}
+                        rows={4}
+                        className={cn(AUTH_INPUT_GROUP_CONTROL_CLASS, 'min-h-[5.5rem] resize-y py-2.5')}
+                        aria-invalid={errorMessage ? 'true' : undefined}
+                        {...register(field.name)}
+                      />
+                    </CrudFieldHintAria>
                   </InputGroup>
                   {errorMessage ? <FieldErrorWithIcon message={errorMessage} /> : null}
                 </Field>
@@ -511,12 +636,22 @@ function GenericCrudFormContent<T extends FieldValues>({
                   className={cellClass}
                   data-invalid={errorMessage ? true : undefined}
                 >
-                  <FieldLabel htmlFor={fieldId} className="text-sm font-medium">
-                    {field.label}
+                  <FieldLabel
+                    htmlFor={fieldId}
+                    className="!block !h-auto !w-full !min-w-0 !max-w-full !gap-0 !leading-snug !font-normal text-foreground"
+                  >
+                    <span className="inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                      <span className="text-sm font-medium leading-snug">{field.label}</span>
+                      {field.description ? (
+                        <FieldDescription
+                          variant="tooltip"
+                          tooltipTriggerAriaLabel={field.descriptionAriaLabel}
+                        >
+                          {field.description}
+                        </FieldDescription>
+                      ) : null}
+                    </span>
                   </FieldLabel>
-                  {field.description ? (
-                    <FieldDescription>{field.description}</FieldDescription>
-                  ) : null}
                   <InputGroup className={AUTH_INPUT_GROUP_CLASS}>
                     {Icon ? (
                       <InputGroupAddon align="inline-start" className={AUTH_INPUT_GROUP_ADDON_CLASS}>
@@ -531,16 +666,18 @@ function GenericCrudFormContent<T extends FieldValues>({
                           value={typeof rhfField.value === 'string' ? rhfField.value : undefined}
                           onValueChange={rhfField.onChange}
                         >
-                          <SelectTrigger
-                            id={fieldId}
-                            size="default"
-                            ref={rhfField.ref}
-                            onBlur={rhfField.onBlur}
-                            className={AUTH_SELECT_TRIGGER_IN_GROUP_CLASS}
-                            aria-invalid={errorMessage ? 'true' : undefined}
-                          >
-                            <SelectValue placeholder={field.placeholder} />
-                          </SelectTrigger>
+                          <CrudFieldHintAria>
+                            <SelectTrigger
+                              id={fieldId}
+                              size="default"
+                              ref={rhfField.ref}
+                              onBlur={rhfField.onBlur}
+                              className={AUTH_SELECT_TRIGGER_IN_GROUP_CLASS}
+                              aria-invalid={errorMessage ? 'true' : undefined}
+                            >
+                              <SelectValue placeholder={field.placeholder} />
+                            </SelectTrigger>
+                          </CrudFieldHintAria>
                           <SelectContent position="popper" sideOffset={6} align="start" className="rounded-lg">
                             {field.options.map((opt) => (
                               <SelectItem key={opt.value} value={opt.value} className="rounded-md">
@@ -564,34 +701,46 @@ function GenericCrudFormContent<T extends FieldValues>({
                   className={cellClass}
                   data-invalid={errorMessage ? true : undefined}
                 >
-                  <FieldLabel htmlFor={fieldId} className="text-sm font-medium">
-                    {field.label}
+                  <FieldLabel
+                    htmlFor={fieldId}
+                    className="!block !h-auto !w-full !min-w-0 !max-w-full !gap-0 !leading-snug !font-normal text-foreground"
+                  >
+                    <span className="inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                      <span className="text-sm font-medium leading-snug">{field.label}</span>
+                      {field.description ? (
+                        <FieldDescription
+                          variant="tooltip"
+                          tooltipTriggerAriaLabel={field.descriptionAriaLabel}
+                        >
+                          {field.description}
+                        </FieldDescription>
+                      ) : null}
+                    </span>
                   </FieldLabel>
-                  {field.description ? (
-                    <FieldDescription>{field.description}</FieldDescription>
-                  ) : null}
                   <InputGroup className={AUTH_INPUT_GROUP_CLASS}>
                     {Icon ? (
                       <InputGroupAddon align="inline-start" className={AUTH_INPUT_GROUP_ADDON_CLASS}>
                         <Icon className="size-4 shrink-0" aria-hidden />
                       </InputGroupAddon>
                     ) : null}
-                    <InputGroupInput
-                      id={fieldId}
-                      type="number"
-                      placeholder={field.placeholder}
-                      min={field.min}
-                      max={field.max}
-                      step={field.step ?? 1}
-                      className={AUTH_INPUT_GROUP_CONTROL_CLASS}
-                      aria-invalid={errorMessage ? 'true' : undefined}
-                      {...register(field.name, {
-                        setValueAs: (value) => {
-                          if (value === '') return undefined
-                          return Number(value)
-                        },
-                      })}
-                    />
+                    <CrudFieldHintAria>
+                      <InputGroupInput
+                        id={fieldId}
+                        type="number"
+                        placeholder={field.placeholder}
+                        min={field.min}
+                        max={field.max}
+                        step={field.step ?? 1}
+                        className={AUTH_INPUT_GROUP_CONTROL_CLASS}
+                        aria-invalid={errorMessage ? 'true' : undefined}
+                        {...register(field.name, {
+                          setValueAs: (value) => {
+                            if (value === '') return undefined
+                            return Number(value)
+                          },
+                        })}
+                      />
+                    </CrudFieldHintAria>
                   </InputGroup>
                   {errorMessage ? <FieldErrorWithIcon message={errorMessage} /> : null}
                 </Field>
@@ -606,29 +755,41 @@ function GenericCrudFormContent<T extends FieldValues>({
                   data-invalid={errorMessage ? true : undefined}
                 >
                   <div className="flex h-full min-h-[2.75rem] items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-3 py-2.5 sm:min-h-0 sm:py-3">
-                    <div className="min-w-0 space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        {Icon ? (
-                          <Icon className="text-muted-foreground size-4 shrink-0" aria-hidden />
-                        ) : null}
-                        <FieldLabel htmlFor={fieldId} className="text-sm font-medium">
-                          {field.label}
-                        </FieldLabel>
-                      </div>
-                      {field.description ? (
-                        <FieldDescription className="!mt-1">{field.description}</FieldDescription>
-                      ) : null}
-                    </div>
+                    <FieldLabelRow className="min-w-0 flex-1 items-center">
+                      <FieldLabel
+                        htmlFor={fieldId}
+                        className="!block !h-auto !w-full !min-w-0 !max-w-full !gap-0 !leading-snug !font-normal text-foreground"
+                      >
+                        <span className="inline-flex items-baseline gap-2">
+                          {Icon ? (
+                            <Icon className="text-muted-foreground size-4 shrink-0" aria-hidden />
+                          ) : null}
+                          <span className="inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                            <span className="text-sm font-medium leading-snug">{field.label}</span>
+                            {field.description ? (
+                              <FieldDescription
+                                variant="tooltip"
+                                tooltipTriggerAriaLabel={field.descriptionAriaLabel}
+                              >
+                                {field.description}
+                              </FieldDescription>
+                            ) : null}
+                          </span>
+                        </span>
+                      </FieldLabel>
+                    </FieldLabelRow>
                     <Controller
                       control={control}
                       name={field.name}
                       render={({ field: rhfField }) => (
-                        <Switch
-                          id={fieldId}
-                          checked={Boolean(rhfField.value)}
-                          onCheckedChange={rhfField.onChange}
-                          aria-invalid={errorMessage ? 'true' : undefined}
-                        />
+                        <CrudFieldHintAria>
+                          <Switch
+                            id={fieldId}
+                            checked={Boolean(rhfField.value)}
+                            onCheckedChange={rhfField.onChange}
+                            aria-invalid={errorMessage ? 'true' : undefined}
+                          />
+                        </CrudFieldHintAria>
                       )}
                     />
                   </div>
@@ -644,30 +805,42 @@ function GenericCrudFormContent<T extends FieldValues>({
                   className={cellClass}
                   data-invalid={errorMessage ? true : undefined}
                 >
-                  <FieldLabel htmlFor={fieldId} className="text-sm font-medium">
-                    {field.label}
+                  <FieldLabel
+                    htmlFor={fieldId}
+                    className="!block !h-auto !w-full !min-w-0 !max-w-full !gap-0 !leading-snug !font-normal text-foreground"
+                  >
+                    <span className="inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                      <span className="text-sm font-medium leading-snug">{field.label}</span>
+                      {field.description ? (
+                        <FieldDescription
+                          variant="tooltip"
+                          tooltipTriggerAriaLabel={field.descriptionAriaLabel}
+                        >
+                          {field.description}
+                        </FieldDescription>
+                      ) : null}
+                    </span>
                   </FieldLabel>
-                  {field.description ? (
-                    <FieldDescription>{field.description}</FieldDescription>
-                  ) : null}
                   <InputGroup className={AUTH_INPUT_GROUP_CLASS}>
                     {Icon ? (
                       <InputGroupAddon align="inline-start" className={AUTH_INPUT_GROUP_ADDON_CLASS}>
                         <Icon className="size-4 shrink-0" aria-hidden />
                       </InputGroupAddon>
                     ) : null}
-                    <InputGroupInput
-                      id={fieldId}
-                      type={field.inputType ?? 'text'}
-                      readOnly={field.readOnly}
-                      placeholder={field.placeholder}
-                      className={cn(
-                        AUTH_INPUT_GROUP_CONTROL_CLASS,
-                        field.readOnly && 'cursor-not-allowed opacity-80',
-                      )}
-                      aria-invalid={errorMessage ? 'true' : undefined}
-                      {...register(field.name)}
-                    />
+                    <CrudFieldHintAria>
+                      <InputGroupInput
+                        id={fieldId}
+                        type={field.inputType ?? 'text'}
+                        readOnly={field.readOnly}
+                        placeholder={field.placeholder}
+                        className={cn(
+                          AUTH_INPUT_GROUP_CONTROL_CLASS,
+                          field.readOnly && 'cursor-not-allowed opacity-80',
+                        )}
+                        aria-invalid={errorMessage ? 'true' : undefined}
+                        {...register(field.name)}
+                      />
+                    </CrudFieldHintAria>
                   </InputGroup>
                   {errorMessage ? <FieldErrorWithIcon message={errorMessage} /> : null}
                 </Field>

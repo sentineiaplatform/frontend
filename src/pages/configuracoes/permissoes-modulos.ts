@@ -78,27 +78,6 @@ export const MODULOS: ModuloDef[] = [
     ],
   },
   {
-    id: 'relatorios',
-    label: 'Relatórios',
-    hint: 'Agregados, exports e painéis.',
-    actions: [
-      { id: 'read', tipo: 'read', label: 'Ler', hint: 'Ver relatórios e dashboards permitidos.' },
-      {
-        id: 'generate',
-        tipo: 'other',
-        label: 'Gerar',
-        hint: 'Executar relatório parametrizado.',
-      },
-      { id: 'export', tipo: 'other', label: 'Exportar', hint: 'CSV, PDF ou formatos definidos.' },
-      {
-        id: 'schedule',
-        tipo: 'other',
-        label: 'Agendar envio',
-        hint: 'Jobs recorrentes ou envio por e-mail.',
-      },
-    ],
-  },
-  {
     id: 'configuracoes',
     label: 'Configurações',
     hint: 'Organização, segurança e auditoria.',
@@ -174,10 +153,6 @@ function baselineSeedRows(): Record<string, Record<SeedPerfilId, boolean>> {
   set('workflows', 'update', rowSeed({ admin: true }))
   set('workflows', 'delete', rowSeed({ admin: true }))
   set('workflows', 'publish', rowSeed({ admin: true }))
-  set('relatorios', 'read', rowSeed({ admin: true, triador: true, investigador: true, leitura: true }))
-  set('relatorios', 'generate', rowSeed({ admin: true, triador: true }))
-  set('relatorios', 'export', rowSeed({ admin: true, triador: true, leitura: true }))
-  set('relatorios', 'schedule', rowSeed({ admin: true, triador: false }))
   set('configuracoes', 'read', rowSeed({ admin: true }))
   set('configuracoes', 'update', rowSeed({ admin: true }))
   set('configuracoes', 'members', rowSeed({ admin: true }))

@@ -1,6 +1,5 @@
 export type StatusDenunciaMock = {
   id: string
-  codigo: string
   nome: string
   descricao: string
   ativo: boolean
@@ -10,7 +9,6 @@ export type StatusDenunciaMock = {
 
 export type CategoriaDenunciaMock = {
   id: string
-  codigo: string
   nome: string
   descricao: string
   slaDias: number
@@ -21,7 +19,6 @@ export type CategoriaDenunciaMock = {
 export const STATUS_DENUNCIAS_MOCK: StatusDenunciaMock[] = [
   {
     id: 's1',
-    codigo: 'AB',
     nome: 'Aberta',
     descricao: 'Registro recebido e aguardando triagem.',
     ativo: true,
@@ -30,7 +27,6 @@ export const STATUS_DENUNCIAS_MOCK: StatusDenunciaMock[] = [
   },
   {
     id: 's2',
-    codigo: 'AN',
     nome: 'Em análise',
     descricao: 'Em tratamento por equipe responsável.',
     ativo: true,
@@ -39,7 +35,6 @@ export const STATUS_DENUNCIAS_MOCK: StatusDenunciaMock[] = [
   },
   {
     id: 's3',
-    codigo: 'EC',
     nome: 'Encerrada',
     descricao: 'Processo finalizado com registro de conclusão.',
     ativo: true,
@@ -48,7 +43,6 @@ export const STATUS_DENUNCIAS_MOCK: StatusDenunciaMock[] = [
   },
   {
     id: 's4',
-    codigo: 'AR',
     nome: 'Arquivada',
     descricao: 'Arquivamento administrativo sem conclusão formal.',
     ativo: false,
@@ -57,7 +51,6 @@ export const STATUS_DENUNCIAS_MOCK: StatusDenunciaMock[] = [
   },
   {
     id: 's5',
-    codigo: 'SU',
     nome: 'Suspensa',
     descricao: 'Fluxo pausado por determinação judicial ou auditoria.',
     ativo: true,
@@ -69,7 +62,6 @@ export const STATUS_DENUNCIAS_MOCK: StatusDenunciaMock[] = [
 export const CATEGORIA_DENUNCIAS_MOCK: CategoriaDenunciaMock[] = [
   {
     id: 'c1',
-    codigo: 'COR',
     nome: 'Corrupção',
     descricao: 'Desvio de recursos ou conduta potencialmente ilícita.',
     slaDias: 30,
@@ -78,7 +70,6 @@ export const CATEGORIA_DENUNCIAS_MOCK: CategoriaDenunciaMock[] = [
   },
   {
     id: 'c2',
-    codigo: 'ASS',
     nome: 'Assédio',
     descricao: 'Moral, sexual ou discriminação no ambiente de trabalho.',
     slaDias: 15,
@@ -87,7 +78,6 @@ export const CATEGORIA_DENUNCIAS_MOCK: CategoriaDenunciaMock[] = [
   },
   {
     id: 'c3',
-    codigo: 'CON',
     nome: 'Conflito de interesses',
     descricao: 'Situações que possam afetar imparcialidade.',
     slaDias: 20,
@@ -96,7 +86,6 @@ export const CATEGORIA_DENUNCIAS_MOCK: CategoriaDenunciaMock[] = [
   },
   {
     id: 'c4',
-    codigo: 'LGPD',
     nome: 'Privacidade / LGPD',
     descricao: 'Tratamento indevido de dados pessoais.',
     slaDias: 10,
@@ -105,7 +94,6 @@ export const CATEGORIA_DENUNCIAS_MOCK: CategoriaDenunciaMock[] = [
   },
   {
     id: 'c5',
-    codigo: 'LEG',
     nome: 'Legado',
     descricao: 'Categoria descontinuada — manter apenas histórico.',
     slaDias: 0,

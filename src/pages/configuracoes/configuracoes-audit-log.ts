@@ -16,7 +16,6 @@ const entrySchema = z.object({
     'permissoes',
     'integracao',
     'notificacoes',
-    'relatorios',
   ]),
   action: z.string(),
   detail: z.string().optional(),

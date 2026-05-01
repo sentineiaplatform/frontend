@@ -1,20 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Archive,
+  CircleCheck,
   CircleDot,
-  ClipboardCopy,
+  CircleSlash,
   Download,
   Eye,
-  Hash,
   History,
   ListChecks,
-  ListOrdered,
   PencilLine,
   Plus,
   RefreshCw,
   Search,
-  Share2,
   SlidersHorizontal,
   TextAlignStart,
   ToggleLeft,
@@ -22,7 +19,6 @@ import {
 } from 'lucide-react'
 
 import { RegistrosListaPaginada, RegistrosPageHeader } from '@/components/registros'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -46,27 +42,36 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { plainTextFromHtml } from '@/lib/html-plain-text'
 import { cn } from '@/lib/utils'
 import {
   CabecalhoColuna,
   CabecalhoColunaAcoes,
+  CelulaTextoRico,
+  CelulaValorBooleano,
   estadoCabecalhoSelecaoPagina,
   formatoDataHora,
   LINHAS_DADOS_MESTRES,
   pinTdAcoes,
   pinTdCheckbox,
 } from '@/pages/dados-mestres/dados-mestres-listagem-shared'
+import type { StatusDenunciaMock } from '@/pages/dados-mestres/dados-mestres-mock'
 import {
-  type StatusDenunciaMock,
-  STATUS_DENUNCIAS_MOCK,
-} from '@/pages/dados-mestres/dados-mestres-mock'
+  fetchComplaintStatuses,
+  updateComplaintStatus,
+} from '@/services/complaint-status-service'
 import { toast } from 'sonner'
 
+function textoPlanoPreview(html: string, max = 160): string {
+  const t = plainTextFromHtml(html)
+  return t.length <= max ? t : `${t.slice(0, max)}…`
+}
+
 function exportarCsvStatus(linhas: StatusDenunciaMock[]) {
-  const header = ['codigo', 'nome', 'descricao', 'ativo', 'ordem', 'atualizado_em']
+  const header = ['nome', 'descricao', 'ativo', 'atualizado_em']
   const esc = (s: string) => `"${s.replaceAll('"', '""')}"`
   const body = linhas.map((r) =>
-    [r.codigo, r.nome, r.descricao, r.ativo ? 'sim' : 'nao', String(r.ordem), r.atualizadoEm]
+    [r.nome, plainTextFromHtml(r.descricao), r.ativo ? 'sim' : 'nao', r.atualizadoEm]
       .map(esc)
       .join(','),
   )
@@ -84,9 +89,25 @@ function exportarCsvStatus(linhas: StatusDenunciaMock[]) {
 /** Dados mestres — status de denúncia (listagem no padrão da tela de Denúncias). */
 export function StatusDenunciasPage() {
   const navigate = useNavigate()
-  const [registros] = useState<StatusDenunciaMock[]>(() =>
-    STATUS_DENUNCIAS_MOCK.map((r) => ({ ...r })),
-  )
+  const [registros, setRegistros] = useState<StatusDenunciaMock[]>([])
+  const [carregando, setCarregando] = useState(true)
+
+  const carregarLista = useCallback(async () => {
+    setCarregando(true)
+    try {
+      const linhas = await fetchComplaintStatuses()
+      setRegistros(linhas)
+    } catch {
+      toast.error('Não foi possível carregar os status de denúncia.')
+      setRegistros([])
+    } finally {
+      setCarregando(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void carregarLista()
+  }, [carregarLista])
   const [pagina, setPagina] = useState(1)
   const [itensPorPagina, setItensPorPagina] = useState(20)
   const [busca, setBusca] = useState('')
@@ -98,9 +119,8 @@ export function StatusDenunciasPage() {
     return registros.filter((r) => {
       const matchBusca =
         q.length === 0 ||
-        r.codigo.toLowerCase().includes(q) ||
         r.nome.toLowerCase().includes(q) ||
-        r.descricao.toLowerCase().includes(q)
+        plainTextFromHtml(r.descricao).toLowerCase().includes(q)
       const matchAtivo =
         filtroAtivo === 'todos' ||
         (filtroAtivo === 'sim' && r.ativo) ||
@@ -170,10 +190,14 @@ export function StatusDenunciasPage() {
     () => registros.filter((r) => selecao.has(r.id)),
     [registros, selecao],
   )
+  const algumAtivoNaSelecao = useMemo(
+    () => registrosSelecionados.some((r) => r.ativo),
+    [registrosSelecionados],
+  )
   const qtdSelecionados = selecao.size
   const temSelecao = qtdSelecionados > 0
 
-  const colSpanVazio = 8
+  const colSpanVazio = 6
 
   return (
     <div className="flex flex-col gap-4 md:gap-5">
@@ -195,7 +219,7 @@ export function StatusDenunciasPage() {
               variant="ghost"
               size="icon-sm"
               className="text-muted-foreground hover:text-foreground size-9"
-              onClick={() => toast.message('Lista atualizada (mock).')}
+              onClick={() => void carregarLista()}
               aria-label="Atualizar lista"
             >
               <RefreshCw className="size-4" strokeWidth={1.75} />
@@ -241,7 +265,7 @@ export function StatusDenunciasPage() {
             <Input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar código, nome ou descrição…"
+              placeholder="Buscar nome ou descrição…"
               className="border-border/40 bg-muted/[0.92] dark:bg-muted/95 h-8 w-full border pl-8 text-[13px] shadow-none"
               aria-label="Buscar"
             />
@@ -322,27 +346,55 @@ export function StatusDenunciasPage() {
                   type="button"
                   variant="outline"
                   size="icon-sm"
-                  className="size-8"
-                  onClick={() => toast.message(`${qtdSelecionados} link(s) (mock).`)}
+                  className={
+                    algumAtivoNaSelecao
+                      ? 'border-destructive/25 text-destructive hover:bg-destructive/10 size-8'
+                      : 'size-8'
+                  }
+                  aria-label={
+                    algumAtivoNaSelecao ? 'Inativar selecionados' : 'Ativar selecionados'
+                  }
+                  onClick={() => {
+                    const proxima = !algumAtivoNaSelecao
+                    if (
+                      !window.confirm(
+                        proxima
+                          ? `Ativar ${qtdSelecionados} status selecionado(s)?`
+                          : `Inativar ${qtdSelecionados} status selecionado(s)? Permanecem no histórico.`,
+                      )
+                    ) {
+                      return
+                    }
+                    void (async () => {
+                      try {
+                        await Promise.all(
+                          registrosSelecionados.map((r) =>
+                            updateComplaintStatus(r.id, {
+                              name: r.nome,
+                              description: r.descricao || null,
+                              active: proxima,
+                            }),
+                          ),
+                        )
+                        toast.success(
+                          proxima ? 'Status ativados.' : 'Status inativados.',
+                        )
+                        void carregarLista()
+                        limparSelecao()
+                      } catch {
+                        toast.error('Não foi possível atualizar a seleção.')
+                      }
+                    })()
+                  }}
                 >
-                  <Share2 className="size-3.5" strokeWidth={1.75} />
+                  {algumAtivoNaSelecao ? (
+                    <CircleSlash className="size-3.5" strokeWidth={1.75} />
+                  ) : (
+                    <CircleCheck className="size-3.5" strokeWidth={1.75} />
+                  )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Compartilhar</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  className="border-destructive/25 text-destructive hover:bg-destructive/10 size-8"
-                  onClick={() => toast.message('Inativar selecionados (mock).')}
-                >
-                  <Archive className="size-3.5" strokeWidth={1.75} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Inativar</TooltipContent>
+              <TooltipContent>{algumAtivoNaSelecao ? 'Inativar' : 'Ativar'}</TooltipContent>
             </Tooltip>
             <div className="bg-border/60 mx-1 hidden h-5 w-px sm:block" aria-hidden />
             <Tooltip>
@@ -393,17 +445,11 @@ export function StatusDenunciasPage() {
                   />
                 </div>
               </TableHead>
-              <TableHead className="text-muted-foreground min-w-[5rem] px-2 py-2.5 text-left text-[11px]">
-                <CabecalhoColuna icone={Hash} rotulo="Código" />
-              </TableHead>
               <TableHead className="text-muted-foreground min-w-[8rem] px-2 py-2.5 text-left text-[11px]">
                 <CabecalhoColuna icone={CircleDot} rotulo="Nome" />
               </TableHead>
               <TableHead className="text-muted-foreground min-w-[14rem] px-2 py-2.5 text-left text-[11px]">
                 <CabecalhoColuna icone={TextAlignStart} rotulo="Descrição" />
-              </TableHead>
-              <TableHead className="text-muted-foreground min-w-[5.5rem] px-2 py-2.5 text-left text-[11px]">
-                <CabecalhoColuna icone={ListOrdered} rotulo="Ordem" />
               </TableHead>
               <TableHead className="text-muted-foreground min-w-[7rem] px-2 py-2.5 text-right text-[11px]">
                 <CabecalhoColuna icone={ToggleLeft} rotulo="Ativo" alinhar="right" />
@@ -423,7 +469,16 @@ export function StatusDenunciasPage() {
             </TableRow>
           </TableHeader>
           <TableBody className="[&_td]:whitespace-normal">
-            {linhas.length === 0 ? (
+            {carregando ? (
+              <TableRow>
+                <TableCell
+                  colSpan={colSpanVazio}
+                  className="text-muted-foreground py-14 text-center text-sm"
+                >
+                  Carregando…
+                </TableCell>
+              </TableRow>
+            ) : linhas.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={colSpanVazio}
@@ -449,28 +504,20 @@ export function StatusDenunciasPage() {
                     <TableCell className={pinTdCheckbox(sel)}>
                       <div className="flex justify-center">
                         <Checkbox
-                          aria-label={`Selecionar ${r.codigo}`}
+                          aria-label={`Selecionar ${r.nome}`}
                           checked={sel}
                           onCheckedChange={(v) => alternarLinha(r.id, v === true)}
                         />
                       </div>
                     </TableCell>
-                    <TableCell className="text-primary px-2 py-2.5 align-middle font-mono text-[12px] font-semibold">
-                      {r.codigo}
-                    </TableCell>
                     <TableCell className="text-foreground min-w-[7rem] px-2 py-2.5 align-middle text-[13px] font-medium">
                       {r.nome}
                     </TableCell>
-                    <TableCell className="text-muted-foreground max-w-[20rem] px-2 py-2.5 align-middle text-[12px] leading-snug">
-                      {r.descricao}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground px-2 py-2.5 align-middle tabular-nums">
-                      {r.ordem}
+                    <TableCell className="text-muted-foreground max-w-[20rem] min-w-0 whitespace-normal px-2 py-2.5 align-middle text-[12px] leading-snug">
+                      <CelulaTextoRico html={r.descricao} />
                     </TableCell>
                     <TableCell className="px-2 py-2.5 text-right align-middle">
-                      <Badge variant={r.ativo ? 'secondary' : 'outline'} className="text-[11px] font-normal">
-                        {r.ativo ? 'Ativo' : 'Inativo'}
-                      </Badge>
+                      <CelulaValorBooleano value={r.ativo} />
                     </TableCell>
                     <TableCell className="text-muted-foreground px-2 py-2.5 align-middle tabular-nums">
                       {formatoDataHora(r.atualizadoEm)}
@@ -485,8 +532,12 @@ export function StatusDenunciasPage() {
                                 'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background',
                                 'shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
                               )}
-                              aria-label={`Ver ${r.codigo}`}
-                              onClick={() => toast.message(`Detalhes: ${r.nome} (mock).`)}
+                              aria-label={`Ver ${r.nome}`}
+                              onClick={() =>
+                                toast.message(r.nome, {
+                                  description: textoPlanoPreview(r.descricao),
+                                })
+                              }
                             >
                               <Eye className="size-4 shrink-0" strokeWidth={2} aria-hidden />
                             </button>
@@ -501,7 +552,7 @@ export function StatusDenunciasPage() {
                                 'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background',
                                 'shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
                               )}
-                              aria-label={`Editar ${r.codigo}`}
+                              aria-label={`Editar ${r.nome}`}
                               onClick={() =>
                                 navigate(`/app/dados-mestres/status-denuncias/${r.id}?modal=true`)
                               }
@@ -516,46 +567,58 @@ export function StatusDenunciasPage() {
                             <button
                               type="button"
                               className={cn(
-                                'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background',
-                                'shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
+                                r.ativo
+                                  ? 'inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-destructive/40 bg-background text-destructive shadow-sm transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-destructive/30 focus-visible:outline-none'
+                                  : 'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
                               )}
-                              aria-label={`Copiar dados de ${r.codigo}`}
-                              onClick={() => toast.message(`Copiado: ${r.codigo} (mock).`)}
+                              aria-label={r.ativo ? `Inativar ${r.nome}` : `Ativar ${r.nome}`}
+                              onClick={() => {
+                                const proxima = !r.ativo
+                                if (
+                                  !proxima &&
+                                  !window.confirm(
+                                    `Inativar o status "${r.nome}"? Permanece disponível para histórico.`,
+                                  )
+                                ) {
+                                  return
+                                }
+                                void updateComplaintStatus(r.id, {
+                                  name: r.nome,
+                                  description: r.descricao || null,
+                                  active: proxima,
+                                }).then(
+                                  () => {
+                                    toast.success(proxima ? 'Status ativado.' : 'Status inativado.')
+                                    void carregarLista()
+                                    setSelecao((prev) => {
+                                      const next = new Set(prev)
+                                      next.delete(r.id)
+                                      return next
+                                    })
+                                  },
+                                  () =>
+                                    toast.error(
+                                      proxima
+                                        ? 'Não foi possível ativar o status.'
+                                        : 'Não foi possível inativar o status.',
+                                    ),
+                                )
+                              }}
                             >
-                              <ClipboardCopy className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+                              {r.ativo ? (
+                                <CircleSlash className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+                              ) : (
+                                <CircleCheck
+                                  className="size-4 shrink-0"
+                                  strokeWidth={2}
+                                  aria-hidden
+                                />
+                              )}
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent side="top">Copiar</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className={cn(
-                                'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background',
-                                'shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
-                              )}
-                              onClick={() => toast.message(`Compartilhar ${r.codigo} (mock).`)}
-                            >
-                              <Share2 className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">Compartilhar</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className={cn(
-                                'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background',
-                                'shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
-                              )}
-                              onClick={() => toast.message(`Arquivar ${r.codigo} (mock).`)}
-                            >
-                              <Archive className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">Arquivar</TooltipContent>
+                          <TooltipContent side="top">
+                            {r.ativo ? 'Inativar' : 'Ativar'}
+                          </TooltipContent>
                         </Tooltip>
                       </div>
                     </TableCell>

@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CircleDot, FileText, Hash, ListOrdered, TextAlignStart, ToggleLeft } from 'lucide-react'
+import { CircleDot, FileText, TextAlignStart, ToggleLeft } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
@@ -10,46 +10,50 @@ import {
   GenericCrudForm,
   type CrudFormField,
 } from '@/components/forms/generic-crud-form'
-import { textoPlanoDeHtml } from '@/lib/html-plain-text'
-import { STATUS_DENUNCIAS_MOCK } from '@/pages/dados-mestres/dados-mestres-mock'
+import {
+  createComplaintStatus,
+  fetchComplaintStatusById,
+  updateComplaintStatus,
+  type ComplaintStatusDto,
+} from '@/services/complaint-status-service'
 
 const statusFormSchema = z.object({
-  codigo: z
+  nome: z
     .string()
     .trim()
-    .min(2, 'Informe ao menos 2 caracteres.')
-    .max(8, 'Use no máximo 8 caracteres.'),
-  nome: z.string().trim().min(2, 'Informe o nome do status.'),
+    .min(2, 'Informe o nome do status.')
+    .max(100, 'Use no máximo 100 caracteres (limite da API).'),
   descricao: z
     .string()
-    .refine((s) => textoPlanoDeHtml(s).length >= 5, {
-      message: 'Inclua uma descrição mais completa (texto visível).',
-    }),
-  ordem: z.number().int().min(1, 'A ordem deve ser maior que zero.'),
+    .max(500, 'Use no máximo 500 caracteres (limite da API).'),
   ativo: z.boolean(),
 })
 
 type StatusFormValues = z.infer<typeof statusFormSchema>
 
 const defaultStatusValues: StatusFormValues = {
-  codigo: '',
   nome: '',
   descricao: '',
-  ordem: 1,
   ativo: true,
 }
 
 const fields: CrudFormField<StatusFormValues>[] = [
-  { type: 'text', name: 'codigo', label: 'Código', placeholder: 'AB', icon: Hash },
-  { type: 'text', name: 'nome', label: 'Nome', placeholder: 'Aberta', icon: CircleDot },
   {
-    type: 'richtext',
+    type: 'text',
+    name: 'nome',
+    label: 'Nome',
+    placeholder: 'Aberta',
+    icon: CircleDot,
+    fullWidth: true,
+  },
+  {
+    type: 'textarea',
     name: 'descricao',
     label: 'Descrição',
-    placeholder: 'Explique quando esse status deve ser usado.',
+    placeholder: 'Explique quando esse status deve ser usado (texto simples).',
     icon: TextAlignStart,
+    fullRow: true,
   },
-  { type: 'number', name: 'ordem', label: 'Ordem', min: 1, icon: ListOrdered },
   {
     type: 'switch',
     name: 'ativo',
@@ -58,6 +62,14 @@ const fields: CrudFormField<StatusFormValues>[] = [
     icon: ToggleLeft,
   },
 ]
+
+function dtoToForm(dto: ComplaintStatusDto): StatusFormValues {
+  return {
+    nome: dto.name,
+    descricao: dto.description ?? '',
+    ativo: dto.active,
+  }
+}
 
 export function StatusDenunciaFormPage() {
   const navigate = useNavigate()
@@ -68,21 +80,13 @@ export function StatusDenunciaFormPage() {
   const presentation =
     modalParam === 'true' || modalParam === '1' ? 'modal' : 'page'
   const isEdit = Boolean(id)
-  const current = useMemo(
-    () => STATUS_DENUNCIAS_MOCK.find((item) => item.id === id),
-    [id],
-  )
+  const [remoto, setRemoto] = useState<ComplaintStatusDto | null>(null)
+  const [carregando, setCarregando] = useState(isEdit)
 
   const defaultValues = useMemo<StatusFormValues>(() => {
-    if (!current) return defaultStatusValues
-    return {
-      codigo: current.codigo,
-      nome: current.nome,
-      descricao: current.descricao,
-      ordem: current.ordem,
-      ativo: current.ativo,
-    }
-  }, [current])
+    if (!remoto) return defaultStatusValues
+    return dtoToForm(remoto)
+  }, [remoto])
 
   const form = useForm<StatusFormValues>({
     resolver: zodResolver(statusFormSchema),
@@ -94,11 +98,30 @@ export function StatusDenunciaFormPage() {
   }, [defaultValues, form])
 
   useEffect(() => {
-    if (!isEdit) return
-    if (current) return
-    toast.error('Status não encontrado.')
-    navigate('/app/dados-mestres/status-denuncias', { replace: true })
-  }, [current, isEdit, navigate])
+    if (!isEdit || !id) return
+    let cancelado = false
+    setCarregando(true)
+    fetchComplaintStatusById(id)
+      .then((dto) => {
+        if (!cancelado) setRemoto(dto)
+      })
+      .catch((err: Error) => {
+        if (cancelado) return
+        if (err.message === 'not_found') {
+          toast.error('Status não encontrado.')
+          navigate('/app/dados-mestres/status-denuncias', { replace: true })
+          return
+        }
+        toast.error('Não foi possível carregar o status.')
+        navigate('/app/dados-mestres/status-denuncias', { replace: true })
+      })
+      .finally(() => {
+        if (!cancelado) setCarregando(false)
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [id, isEdit, navigate])
 
   function closeForm() {
     if (presentation === 'modal') {
@@ -109,17 +132,34 @@ export function StatusDenunciaFormPage() {
   }
 
   function onSubmit(values: StatusFormValues) {
-    toast.success(isEdit ? 'Status atualizado (mock).' : 'Status criado (mock).', {
-      description: `${values.codigo} · ${values.nome}`,
-    })
-    closeForm()
+    const descTrim = values.descricao.trim()
+    const body = {
+      name: values.nome.trim(),
+      description: descTrim.length > 0 ? descTrim : null,
+      active: values.ativo,
+    }
+    const done = () => {
+      toast.success(isEdit ? 'Status atualizado.' : 'Status criado.', {
+        description: values.nome.trim(),
+      })
+      closeForm()
+    }
+    const fail = () => {
+      toast.error(isEdit ? 'Não foi possível atualizar o status.' : 'Não foi possível criar o status.')
+    }
+    if (isEdit && id) {
+      void updateComplaintStatus(id, body).then(done, fail)
+      return
+    }
+    void createComplaintStatus(body).then(done, fail)
   }
 
-  if (isEdit && !current) return null
+  if (isEdit && carregando) return null
+  if (isEdit && !remoto) return null
 
   return (
     <GenericCrudForm
-      title={isEdit ? `Editar status ${current?.codigo ?? ''}` : 'Novo status de denúncia'}
+      title={isEdit ? `Editar status — ${remoto?.name ?? ''}` : 'Novo status de denúncia'}
       description="Formulário genérico reutilizável com suporte a rota e modal."
       headerIcon={CircleDot}
       headerDescriptionIcon={FileText}

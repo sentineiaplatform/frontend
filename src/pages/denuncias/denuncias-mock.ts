@@ -38,6 +38,8 @@ export type DenunciaMock = {
   metadadosEntrada: DenunciaMetadadosEntradaMock
   /** Prazo de SLA para triagem inicial, em horas após registradoEm. */
   slaTriagemHoras: number
+  /** Caso inativo na fila (mock); não confundir com status do fluxo (aberta/em análise/encerrada). */
+  ativa: boolean
 }
 
 type DenunciaRowBase = Omit<
@@ -52,6 +54,7 @@ type DenunciaRowBase = Omit<
   | 'anonimato'
   | 'metadadosEntrada'
   | 'slaTriagemHoras'
+  | 'ativa'
 >
 
 const DENUNCIA_BASE_ROWS: DenunciaRowBase[] = [
@@ -342,6 +345,7 @@ export const DENUNCIAS_MOCK: DenunciaMock[] = DENUNCIA_BASE_ROWS.map((row, idx) 
     anonimato: idx % 3 === 0 ? 'identificado' : 'anonimo',
     metadadosEntrada: metadadosEntradaMock(idx),
     slaTriagemHoras: 48,
+    ativa: idx % 11 !== 3,
   }
 })
 

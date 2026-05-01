@@ -22,6 +22,15 @@ export function setSessionDisplayName(name: string) {
   globalThis.dispatchEvent(new Event(SESSION_UPDATED_EVENT))
 }
 
+export function clearSessionDisplayName() {
+  try {
+    sessionStorage.removeItem(SESSION_DISPLAY_NAME_KEY)
+  } catch {
+    /* ignore */
+  }
+  globalThis.dispatchEvent(new Event(SESSION_UPDATED_EVENT))
+}
+
 export function sessionDisplayNameEventName(): string {
   return SESSION_UPDATED_EVENT
 }

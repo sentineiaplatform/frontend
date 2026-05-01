@@ -6,9 +6,7 @@ import {
   BotIcon,
   ChevronDownIcon,
   CircleHelpIcon,
-  EyeIcon,
   DatabaseIcon,
-  FileTextIcon,
   InboxIcon,
   LayoutDashboardIcon,
   MoonIcon,
@@ -26,7 +24,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -76,12 +73,6 @@ const subNavClass =
 /** Seta dos itens pai colapsáveis: `ml-auto` encostava na borda direita do botão / da barra. */
 const parentNavChevronClass =
   'ml-auto mr-1 size-3.5 shrink-0 text-white/45 transition-transform duration-200 group-data-[state=open]:rotate-180'
-
-const relatoriosSub = [
-  { to: '/app/relatorios/visao-geral', label: 'Visão geral' },
-  { to: '/app/relatorios/por-periodo', label: 'Por período' },
-  { to: '/app/relatorios/agendados', label: 'Agendados' },
-]
 
 const dadosMestresSub = [
   { to: '/app/dados-mestres/status-denuncias', label: 'Status denúncias' },
@@ -165,71 +156,6 @@ export function DashboardSidebar() {
                   </SidebarMenuItem>
                 )
               })}
-
-              <SidebarMenuItem>
-                <Collapsible defaultOpen={false} className="group w-full min-w-0">
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton
-                      tooltip="Relatórios"
-                      isActive={false}
-                      type="button"
-                      className={cn(navItemButtonClass(false), 'pr-3.5')}
-                    >
-                      <FileTextIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
-                      <span>Relatórios</span>
-                      <ChevronDownIcon className={parentNavChevronClass} aria-hidden />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub className="mx-0 ml-2.5 gap-0 px-2.5 pr-1.5 py-0.5 [&_[data-sidebar=menu-sub-item]]:before:bg-white/25 [&_[data-sidebar=menu-sub-item]]:after:bg-white/25">
-                      {relatoriosSub.map((sub) => {
-                        const subActive = navItemActive(pathname, sub.to)
-                        return (
-                          <SidebarMenuSubItem key={sub.label}>
-                            <SidebarMenuSubButton
-                              asChild
-                              size="sm"
-                              isActive={subActive}
-                              className={cn(
-                                subNavClass,
-                                subActive && navSubmenuActiveClass(),
-                              )}
-                            >
-                              <Link to={sub.to}>{sub.label}</Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        )
-                      })}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </Collapsible>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  tooltip="Insights IA"
-                  isActive={navItemActive(pathname, '/app/indicadores')}
-                  className={cn(
-                    navItemButtonClass(navItemActive(pathname, '/app/indicadores')),
-                    'pr-8',
-                  )}
-                >
-                  <Link to="/app/indicadores">
-                    <BarChart3Icon className="shrink-0" strokeWidth={1.65} aria-hidden />
-                    <span>Insights IA</span>
-                  </Link>
-                </SidebarMenuButton>
-                <SidebarMenuAction
-                  aria-label="Pré-visualizar"
-                  title="Pré-visualizar"
-                  type="button"
-                  className="text-white/50 hover:bg-white/10 hover:text-white"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <EyeIcon className="size-3.5" strokeWidth={1.65} />
-                </SidebarMenuAction>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
 
@@ -286,6 +212,22 @@ export function DashboardSidebar() {
                 >
                   <BotIcon className="shrink-0" strokeWidth={1.65} aria-hidden />
                   <span>Copiloto IA</span>
+                </SidebarMenuButton>
+                <SidebarMenuBadge title="Em breve" className={SIDEBAR_NAV_BADGE_SM_CLASS}>
+                  Breve
+                </SidebarMenuBadge>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  type="button"
+                  tooltip="Insights IA — em breve"
+                  isActive={false}
+                  className={cn(navItemButtonClass(false), 'text-white/[0.82] [&_svg]:text-white/55')}
+                  onClick={() => toast.message('Insights IA disponível em breve.')}
+                >
+                  <BarChart3Icon className="shrink-0" strokeWidth={1.65} aria-hidden />
+                  <span>Insights IA</span>
                 </SidebarMenuButton>
                 <SidebarMenuBadge title="Em breve" className={SIDEBAR_NAV_BADGE_SM_CLASS}>
                   Breve

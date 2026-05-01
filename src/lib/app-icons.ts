@@ -208,7 +208,7 @@ export const APP_ICON_OPTIONS: readonly AppIconOption[] = [
   { id: 'layoutDashboard', label: 'Painel', group: 'Navegação' },
   { id: 'inbox', label: 'Caixa / denúncias', group: 'Navegação' },
   { id: 'barChart3', label: 'Insights IA', group: 'Navegação' },
-  { id: 'fileText', label: 'Relatórios', group: 'Navegação' },
+  { id: 'fileText', label: 'Documento', group: 'Navegação' },
   { id: 'database', label: 'Dados mestres', group: 'Navegação' },
   { id: 'settings', label: 'Configurações', group: 'Navegação' },
   { id: 'circleHelp', label: 'Ajuda', group: 'Navegação' },

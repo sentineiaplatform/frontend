@@ -116,7 +116,7 @@ export function getMockConfigAuditLogEntries(): ConfigAuditLogEntry[] {
     {
       id: 'mock-audit-15',
       at: offsetIso(1.25),
-      category: 'relatorios',
+      category: 'geral',
       action: 'Agendamento de relatório criado',
       detail: '“Resumo semanal de SLAs” · toda segunda às 08:00 · PDF + e-mail',
     },
@@ -137,7 +137,7 @@ export function getMockConfigAuditLogEntries(): ConfigAuditLogEntry[] {
     {
       id: 'mock-audit-18',
       at: offsetIso(11),
-      category: 'relatorios',
+      category: 'geral',
       action: 'Download de painel executivo (Power BI)',
       detail: 'Dataset “Denúncias Q2” · última refresh 28/04/2026 18:00',
     },
@@ -172,7 +172,7 @@ export function getMockConfigAuditLogEntries(): ConfigAuditLogEntry[] {
     {
       id: 'mock-audit-23',
       at: offsetIso(44),
-      category: 'relatorios',
+      category: 'geral',
       action: 'Modelo de exportação CSV personalizado',
       detail: 'Colunas: protocolo, status, UF, prazo · delimitador ; · UTF-8',
     },
@@ -207,7 +207,7 @@ export function getMockConfigAuditLogEntries(): ConfigAuditLogEntry[] {
     {
       id: 'mock-audit-28',
       at: offsetIsoDays(6, 8),
-      category: 'relatorios',
+      category: 'geral',
       action: 'Compartilhamento de dashboard revogado',
       detail: 'Usuário externo removido · link público invalidado',
     },
@@ -242,7 +242,7 @@ export function getMockConfigAuditLogEntries(): ConfigAuditLogEntry[] {
     {
       id: 'mock-audit-33',
       at: offsetIsoDays(21, 11),
-      category: 'relatorios',
+      category: 'geral',
       action: 'Auditoria de impressão de relatórios sensíveis',
       detail: '3 trabalhos na fila HP-OUV-01 · classificação restrita',
     },

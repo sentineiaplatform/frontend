@@ -13,6 +13,7 @@ export const loginSchema = z.object({
     .string()
     .min(1, 'Informe a senha.')
     .min(8, 'A senha deve ter no mínimo 8 caracteres.'),
+  remember: z.boolean().optional(),
 })
 
 export type LoginFormValues = z.infer<typeof loginSchema>

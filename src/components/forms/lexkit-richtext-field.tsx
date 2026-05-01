@@ -152,6 +152,7 @@ function LexKitRichTextFieldInner({
   placeholder,
   disabled,
   invalid,
+  'aria-describedby': ariaDescribedBy,
 }: Readonly<{
   id: string
   value: string
@@ -160,6 +161,7 @@ function LexKitRichTextFieldInner({
   placeholder?: string
   disabled?: boolean
   invalid?: boolean
+  'aria-describedby'?: string
 }>) {
   const { editor, commands } = useLexKitFormRichText()
   const lastSerialized = useRef<string | null>(null)
@@ -210,6 +212,7 @@ function LexKitRichTextFieldInner({
   return (
     <div
       id={id}
+      aria-describedby={ariaDescribedBy}
       className={cn(
         'lex-form-richtext overflow-hidden rounded-lg border bg-transparent shadow-none transition-colors',
         invalid
@@ -245,6 +248,7 @@ export function LexKitRichTextField({
   placeholder,
   disabled,
   invalid,
+  'aria-describedby': ariaDescribedBy,
 }: Readonly<{
   id: string
   value: string
@@ -253,6 +257,7 @@ export function LexKitRichTextField({
   placeholder?: string
   disabled?: boolean
   invalid?: boolean
+  'aria-describedby'?: string
 }>) {
   return (
     <LexKitFormRichTextProvider extensions={formRichTextExtensions}>
@@ -264,6 +269,7 @@ export function LexKitRichTextField({
         placeholder={placeholder}
         disabled={disabled}
         invalid={invalid}
+        aria-describedby={ariaDescribedBy}
       />
     </LexKitFormRichTextProvider>
   )

@@ -5,7 +5,6 @@ import {
   MailIcon,
   SearchIcon,
   ShieldIcon,
-  SlidersHorizontalIcon,
   UserIcon,
   UserPlusIcon,
   UsersIcon,
@@ -18,13 +17,7 @@ import { RegistrosListaPaginada, RegistrosPageHeader } from '@/components/regist
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -39,88 +32,70 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { appendConfigAuditLog } from '@/pages/configuracoes/configuracoes-audit-log'
+import { AuthRequestError } from '@/services/auth/types'
+import {
+  fetchUsersList,
+  type UserListItemDto,
+} from '@/services/user-profile-service'
 import { configuracoesPageShellClass } from '@/pages/configuracoes/configuracoes-layout'
 import {
   CabecalhoColuna,
   CabecalhoColunaAcoes,
+  CelulaValorBooleano,
   LINHAS_DADOS_MESTRES,
   pinTdAcoes,
 } from '@/pages/dados-mestres/dados-mestres-listagem-shared'
 
-type MembroMock = {
-  id: string
-  nome: string
-  email: string
-  papel: 'Administrador' | 'Triador' | 'Investigador' | 'Leitura'
-  estado: 'Ativo' | 'Convite pendente'
+function membrosErrorMessage(err: unknown): string {
+  if (err instanceof AuthRequestError) return err.message
+  return 'Não foi possível carregar a lista de membros.'
 }
 
-const MEMBROS_MOCK: MembroMock[] = [
-  {
-    id: '1',
-    nome: 'Ana Costa',
-    email: 'ana.costa@empresa.com.br',
-    papel: 'Administrador',
-    estado: 'Ativo',
-  },
-  {
-    id: '2',
-    nome: 'Bruno Silva',
-    email: 'bruno.silva@empresa.com.br',
-    papel: 'Triador',
-    estado: 'Ativo',
-  },
-  {
-    id: '3',
-    nome: 'Carla Mendes',
-    email: 'carla.mendes@empresa.com.br',
-    papel: 'Investigador',
-    estado: 'Convite pendente',
-  },
-]
+const SKELETON_ROWS = 8
 
-function badgeVariant(papel: MembroMock['papel']) {
-  switch (papel) {
-    case 'Administrador':
-      return 'default' as const
-    case 'Triador':
-      return 'secondary' as const
-    case 'Investigador':
-      return 'outline' as const
-    default:
-      return 'ghost' as const
-  }
-}
-
-/** Membros da organização — mock local até existir API. */
+/** Membros da organização — dados de `GET /api/users`. */
 export function ConfiguracoesMembrosPage() {
+  const [membros, setMembros] = useState<UserListItemDto[]>([])
+  const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [pagina, setPagina] = useState(1)
   const [itensPorPagina, setItensPorPagina] = useState(20)
   const [busca, setBusca] = useState('')
-  const [filtroPapel, setFiltroPapel] = useState<
-    'todos' | MembroMock['papel']
-  >('todos')
-  const [filtroEstado, setFiltroEstado] = useState<
-    'todos' | MembroMock['estado']
-  >('todos')
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setFetchError(null)
+      try {
+        const list = await fetchUsersList()
+        if (!cancelled) setMembros(list)
+      } catch (e) {
+        const msg = membrosErrorMessage(e)
+        if (!cancelled) {
+          setMembros([])
+          setFetchError(msg)
+          toast.error(msg)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const dadosFiltrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
-    return MEMBROS_MOCK.filter((m) => {
-      const matchBusca =
-        q.length === 0 ||
-        m.nome.toLowerCase().includes(q) ||
-        m.email.toLowerCase().includes(q)
-      const matchPapel = filtroPapel === 'todos' || m.papel === filtroPapel
-      const matchEstado = filtroEstado === 'todos' || m.estado === filtroEstado
-      return matchBusca && matchPapel && matchEstado
+    return membros.filter((m) => {
+      if (q.length === 0) return true
+      return (
+        m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
+      )
     })
-  }, [busca, filtroPapel, filtroEstado])
-
-  useEffect(() => {
-    setPagina(1)
-  }, [busca, filtroPapel, filtroEstado])
+  }, [membros, busca])
 
   const totalItens = dadosFiltrados.length
   const totalPaginas =
@@ -137,26 +112,13 @@ export function ConfiguracoesMembrosPage() {
     setPagina(1)
   }
 
-  const filtrosAtivos =
-    busca.trim().length > 0 || filtroPapel !== 'todos' || filtroEstado !== 'todos'
+  const filtrosAtivos = busca.trim().length > 0
 
   const limparFiltros = () => {
     setBusca('')
-    setFiltroPapel('todos')
-    setFiltroEstado('todos')
   }
 
   const colSpanVazio = 5
-
-  function onInvite() {
-    toast.message('Convite (simulado)', {
-      description: 'Em produção, abriríamos o fluxo de convite por e-mail.',
-    })
-    appendConfigAuditLog({
-      category: 'membros',
-      action: 'Abrir convite de membro',
-    })
-  }
 
   return (
     <div className={configuracoesPageShellClass}>
@@ -168,15 +130,12 @@ export function ConfiguracoesMembrosPage() {
                 <UsersIcon className="size-[1.15rem]" strokeWidth={1.75} aria-hidden />
               </span>
               <span>Membros</span>
-              <span className="text-muted-foreground bg-muted/50 border-border/50 hidden items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase sm:inline-flex sm:text-[11px]">
-                Pré-visualização
-              </span>
             </span>
           }
           description={
             <>
-              Quem tem acesso à organização neste ambiente. Os dados são de exemplo; convites e SSO
-              virão com a API. As permissões detalhadas estão em{' '}
+              Contas com acesso à aplicação (origem: servidor). Papéis organizacionais e convites
+              por e-mail dependem de evolução da API. Permissões detalhadas em{' '}
               <Link
                 to="/app/configuracoes/permissoes"
                 className="text-primary underline-offset-3 hover:underline"
@@ -192,7 +151,9 @@ export function ConfiguracoesMembrosPage() {
             variant="default"
             size="sm"
             className="h-9 gap-1.5 rounded-lg px-3"
-            onClick={onInvite}
+            disabled
+            title="Convites por API ainda não estão disponíveis no servidor."
+            aria-disabled
           >
             <UserPlusIcon className="size-3.5" strokeWidth={2} aria-hidden />
             Convidar membro
@@ -209,59 +170,19 @@ export function ConfiguracoesMembrosPage() {
               />
               <Input
                 value={busca}
-                onChange={(e) => setBusca(e.target.value)}
+                onChange={(e) => {
+                  setBusca(e.target.value)
+                  setPagina(1)
+                }}
                 placeholder="Buscar nome ou e-mail…"
                 className="border-border/40 bg-muted/[0.92] dark:bg-muted/95 h-8 w-full border pl-8 text-[13px] shadow-none"
                 aria-label="Buscar membros"
+                disabled={loading}
               />
             </div>
           </div>
 
           <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap sm:justify-end md:gap-3">
-            <Select
-              value={filtroPapel}
-              onValueChange={(v) =>
-                setFiltroPapel(v as 'todos' | MembroMock['papel'])
-              }
-            >
-              <SelectTrigger
-                size="sm"
-                aria-label="Filtrar por papel"
-                className="border-border/40 bg-muted/[0.92] dark:bg-muted/95 h-8 w-[min(100%,11rem)] gap-1.5 shadow-none"
-              >
-                <SlidersHorizontalIcon className="text-muted-foreground size-3 shrink-0" aria-hidden />
-                <SelectValue placeholder="Papel" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os papéis</SelectItem>
-                <SelectItem value="Administrador">Administrador</SelectItem>
-                <SelectItem value="Triador">Triador</SelectItem>
-                <SelectItem value="Investigador">Investigador</SelectItem>
-                <SelectItem value="Leitura">Leitura</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={filtroEstado}
-              onValueChange={(v) =>
-                setFiltroEstado(v as 'todos' | MembroMock['estado'])
-              }
-            >
-              <SelectTrigger
-                size="sm"
-                aria-label="Filtrar por estado"
-                className="border-border/40 bg-muted/[0.92] dark:bg-muted/95 h-8 w-[min(100%,12rem)] gap-1.5 shadow-none"
-              >
-                <CheckCircle2Icon className="text-muted-foreground size-3 shrink-0" aria-hidden />
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os estados</SelectItem>
-                <SelectItem value="Ativo">Ativo</SelectItem>
-                <SelectItem value="Convite pendente">Convite pendente</SelectItem>
-              </SelectContent>
-            </Select>
-
             {filtrosAtivos ? (
               <Button
                 type="button"
@@ -289,7 +210,7 @@ export function ConfiguracoesMembrosPage() {
           paginacao={{
             paginaAtual: paginaSegura,
             itensPorPagina,
-            totalItens,
+            totalItens: loading ? 0 : totalItens,
             onPaginaChange: setPagina,
             opcoesItensPorPagina: LINHAS_DADOS_MESTRES,
             onItensPorPaginaChange: aoMudarLinhas,
@@ -322,14 +243,55 @@ export function ConfiguracoesMembrosPage() {
               </TableRow>
             </TableHeader>
             <TableBody className="[&_td]:whitespace-normal">
-              {linhas.length === 0 ? (
+              {loading ? (
+                Array.from({ length: SKELETON_ROWS }, (_, idx) => (
+                  <TableRow key={`sk-${idx}`} className="border-border/30 border-b">
+                    <TableCell className="px-2 py-2.5">
+                      <Skeleton className="h-4 w-[min(100%,10rem)]" />
+                    </TableCell>
+                    <TableCell className="px-2 py-2.5">
+                      <Skeleton className="h-4 w-[min(100%,14rem)]" />
+                    </TableCell>
+                    <TableCell className="px-2 py-2.5">
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                    </TableCell>
+                    <TableCell className="px-2 py-2.5 text-right">
+                      <Skeleton className="ml-auto h-5 w-14 rounded-full" />
+                    </TableCell>
+                    <TableCell className={pinTdAcoes(false)}>
+                      <Skeleton className="ml-auto size-8 shrink-0 rounded-md" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : fetchError ? (
                 <TableRow>
                   <TableCell
                     colSpan={colSpanVazio}
                     className="text-muted-foreground py-14 text-center text-sm"
                   >
                     <div className="flex flex-col items-center gap-2">
-                      Nenhum resultado. Ajuste filtros ou busca.
+                      <p>{fetchError}</p>
+                      <p className="text-[12px]">Atualize a página ou verifique a sessão.</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : linhas.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={colSpanVazio}
+                    className="text-muted-foreground py-14 text-center text-sm"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      {membros.length === 0 ? (
+                        <>
+                          Nenhum utilizador encontrado.
+                          <span className="text-[12px]">
+                            Os utilizadores aparecem aqui após registo no sistema.
+                          </span>
+                        </>
+                      ) : (
+                        <>Nenhum resultado. Ajuste a busca.</>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -340,27 +302,18 @@ export function ConfiguracoesMembrosPage() {
                     className="group/table-row border-border/30 border-b transition-colors hover:bg-muted/12"
                   >
                     <TableCell className="text-foreground min-w-[7rem] px-2 py-2.5 align-middle text-[13px] font-medium">
-                      {m.nome}
+                      {m.name}
                     </TableCell>
                     <TableCell className="text-muted-foreground max-w-[18rem] truncate px-2 py-2.5 align-middle text-[12px] leading-snug">
                       {m.email}
                     </TableCell>
                     <TableCell className="px-2 py-2.5 align-middle">
-                      <Badge variant={badgeVariant(m.papel)} className="text-[11px] font-normal">
-                        {m.papel}
+                      <Badge variant="ghost" className="text-muted-foreground text-[11px] font-normal">
+                        —
                       </Badge>
                     </TableCell>
                     <TableCell className="px-2 py-2.5 text-right align-middle">
-                      <Badge
-                        variant={m.estado === 'Ativo' ? 'secondary' : 'outline'}
-                        className={cn(
-                          'text-[11px] font-normal',
-                          m.estado === 'Convite pendente' &&
-                            'border-amber-500/40 text-amber-700 dark:text-amber-400',
-                        )}
-                      >
-                        {m.estado}
-                      </Badge>
+                      <CelulaValorBooleano value />
                     </TableCell>
                     <TableCell className={pinTdAcoes(false)}>
                       <div className="inline-flex flex-nowrap items-center justify-end gap-1">
@@ -372,9 +325,11 @@ export function ConfiguracoesMembrosPage() {
                                 'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background',
                                 'shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
                               )}
-                              aria-label={`Ver ${m.nome}`}
+                              aria-label={`Ver ${m.name}`}
                               onClick={() =>
-                                toast.message(`Membro: ${m.nome} (simulado).`)
+                                toast.message(m.name, {
+                                  description: m.email,
+                                })
                               }
                             >
                               <EyeIcon className="size-4 shrink-0" strokeWidth={2} aria-hidden />

@@ -1,13 +1,25 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import { getStoredAccessToken } from '@/lib/auth-token-storage'
+import { jwtEmailFromToken, jwtNameFromToken } from '@/lib/jwt-decode'
 import {
+  displayNameFromEmail,
   getSessionDisplayName,
   sessionDisplayNameEventName,
 } from '@/lib/session-user'
 
-/** Nome exibível guardado na sessão (pré-backend). */
+/** Nome exibível: prioriza `name` no JWT, depois sessão, depois fallback a partir do e-mail no token. */
 export function useSessionDisplayName() {
-  const read = useCallback(() => getSessionDisplayName() ?? '', [])
+  const read = useCallback(() => {
+    const token = getStoredAccessToken()
+    const nameJwt = token ? jwtNameFromToken(token) : null
+    if (nameJwt) return nameJwt
+    const stored = getSessionDisplayName()?.trim()
+    if (stored) return stored
+    const email = token ? jwtEmailFromToken(token) : null
+    return email ? displayNameFromEmail(email) : ''
+  }, [])
+
   const [displayName, setDisplayName] = useState(read)
 
   useEffect(() => {

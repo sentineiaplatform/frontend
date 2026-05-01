@@ -162,6 +162,7 @@ import {
   FieldDescription,
   FieldLabel,
   FieldSet,
+  useFieldHintId,
 } from '@/components/ui/field'
 import {
   HoverCard,
@@ -323,6 +324,18 @@ function DsSection({
       <Separator className="my-4" />
       <div className="flex flex-col gap-4">{children}</div>
     </section>
+  )
+}
+
+function DsFieldEmailWithHintInput() {
+  const hintId = useFieldHintId()
+  return (
+    <Input
+      id="ds-email"
+      type="email"
+      placeholder="nome@empresa.com"
+      aria-describedby={hintId ?? undefined}
+    />
   )
 }
 
@@ -556,7 +569,7 @@ export function ComponentShowcase() {
             <FieldLabel htmlFor="ds-email">E-mail</FieldLabel>
             <FieldDescription>Com Field + Label + Input.</FieldDescription>
             <FieldContent>
-              <Input id="ds-email" type="email" placeholder="nome@empresa.com" />
+              <DsFieldEmailWithHintInput />
             </FieldContent>
           </Field>
         </FieldSet>
@@ -784,7 +797,7 @@ export function ComponentShowcase() {
                     <NavigationMenuLink href="#">Denúncias</NavigationMenuLink>
                   </li>
                   <li>
-                    <NavigationMenuLink href="#">Relatórios</NavigationMenuLink>
+                    <NavigationMenuLink href="#">Denúncias</NavigationMenuLink>
                   </li>
                 </ul>
               </NavigationMenuContent>
@@ -903,7 +916,7 @@ export function ComponentShowcase() {
                   <CommandShortcut>⌘N</CommandShortcut>
                 </CommandItem>
                 <CommandItem onSelect={() => setCommandOpen(false)}>
-                  Relatórios
+                  Insights IA
                 </CommandItem>
               </CommandGroup>
             </CommandList>

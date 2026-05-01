@@ -23,7 +23,9 @@ export function HomePage() {
         </CardHeader>
       </Card>
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <Button type="button">Exemplo</Button>
+        <Button asChild>
+          <Link to="/login">Entrar</Link>
+        </Button>
         <Button variant="secondary" asChild>
           <Link to="/design-system">Design system</Link>
         </Button>

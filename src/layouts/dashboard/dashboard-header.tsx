@@ -1,13 +1,28 @@
 import {
   BellIcon,
+  CircleUserIcon,
   LayoutGridIcon,
+  LogOutIcon,
+  MailIcon,
+  UserIcon,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 import { SentineLogo } from '@/components/brand/sentine-logo'
 import { APP_VERSION } from '@/lib/app-version'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useAuth } from '@/contexts/auth-context'
 import { useSessionDisplayName } from '@/hooks/use-session-display-name'
+import { useSessionEmail } from '@/hooks/use-session-email'
 import { displayNameInitials } from '@/lib/session-user'
 import { cn } from '@/lib/utils'
 
@@ -27,8 +42,16 @@ const UNREAD_NOTIFICATION_COUNT = 3
 
 /** Barra superior global — navy, logo + ações. */
 export function DashboardHeader() {
+  const navigate = useNavigate()
+  const { logout } = useAuth()
   const displayName = useSessionDisplayName()
+  const sessionEmail = useSessionEmail()
   const initials = displayName.trim() ? displayNameInitials(displayName) : '?'
+
+  async function handleLogout() {
+    await logout()
+    navigate('/login', { replace: true })
+  }
 
   const notificationsLabel =
     UNREAD_NOTIFICATION_COUNT > 0
@@ -80,25 +103,73 @@ export function DashboardHeader() {
         >
           <LayoutGridIcon className="size-[1.125rem]" />
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className={cn(
-            headerIconButtonClass,
-            'h-9 gap-2 rounded-lg px-2 sm:rounded-full sm:pl-3 sm:pr-1',
-          )}
-          aria-label="Conta"
-        >
-          <span className="text-white/92 hidden max-w-[10rem] truncate text-left text-[0.8125rem] leading-tight font-medium sm:inline md:max-w-[12rem]">
-            {displayName.trim() === '' ? 'Convidado' : displayName}
-          </span>
-          <Avatar className="size-9 shrink-0 border border-white/25">
-            <AvatarFallback className="bg-primary/90 text-[0.6875rem] font-medium text-primary-foreground">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className={cn(
+                headerIconButtonClass,
+                'h-9 gap-2 rounded-lg px-2 sm:rounded-full sm:pl-3 sm:pr-1',
+              )}
+              aria-label="Conta"
+            >
+              <span className="text-white/92 hidden max-w-[10rem] truncate text-left text-[0.8125rem] leading-tight font-medium sm:inline md:max-w-[12rem]">
+                {displayName.trim() === '' ? 'Convidado' : displayName}
+              </span>
+              <Avatar className="size-9 shrink-0 border border-white/25">
+                <AvatarFallback className="bg-primary/90 text-[0.6875rem] font-medium text-primary-foreground">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[14rem]" collisionPadding={12}>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col gap-2 py-1">
+                <div className="flex min-w-0 items-start gap-2">
+                  <CircleUserIcon
+                    className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                    aria-hidden
+                  />
+                  <span className="text-foreground text-sm leading-snug font-medium">
+                    {displayName.trim() === '' ? 'Convidado' : displayName}
+                  </span>
+                </div>
+                <div className="flex min-w-0 items-start gap-2">
+                  <MailIcon
+                    className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                    aria-hidden
+                  />
+                  <span className="text-muted-foreground max-w-[240px] truncate text-xs leading-snug">
+                    {sessionEmail !== '' ? sessionEmail : '—'}
+                  </span>
+                </div>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="cursor-pointer gap-2"
+              onSelect={() => navigate('/app/configuracoes/perfil')}
+            >
+              <UserIcon className="size-4" aria-hidden />
+              Meu perfil
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              className="cursor-pointer gap-2"
+              onSelect={(e) => {
+                e.preventDefault()
+                void handleLogout()
+              }}
+            >
+              <LogOutIcon className="size-4" aria-hidden />
+              Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )

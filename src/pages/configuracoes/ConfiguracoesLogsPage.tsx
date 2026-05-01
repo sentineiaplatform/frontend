@@ -5,7 +5,6 @@ import {
   Building2Icon,
   CircleUserRoundIcon,
   ClipboardCopyIcon,
-  FileBarChartIcon,
   FlaskConicalIcon,
   HardDriveIcon,
   KeyRoundIcon,
@@ -90,7 +89,6 @@ const categoriaLabel: Record<ConfigAuditLogEntry['category'], string> = {
   permissoes: 'Permissões',
   integracao: 'Integração',
   notificacoes: 'Notificações',
-  relatorios: 'Relatórios',
 }
 
 const categoryIcon: Record<
@@ -105,7 +103,6 @@ const categoryIcon: Record<
   permissoes: KeyRoundIcon,
   integracao: PlugIcon,
   notificacoes: BellIcon,
-  relatorios: FileBarChartIcon,
 }
 
 function formatWhen(iso: string): string {

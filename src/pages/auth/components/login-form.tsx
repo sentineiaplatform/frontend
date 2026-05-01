@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   AlertCircleIcon,
   EyeIcon,
@@ -29,7 +29,8 @@ import {
 import { LoginLogo } from '@/pages/auth/components/login-logo'
 import { LoginSocialButtons } from '@/pages/auth/components/login-social-buttons'
 import { type LoginFormValues, loginSchema } from '@/pages/auth/login-schema'
-import { displayNameFromEmail, setSessionDisplayName } from '@/lib/session-user'
+import { useAuth } from '@/contexts/auth-context'
+import { mapAuthErrorToUserMessage } from '@/services/auth/map-auth-error'
 import {
   AUTH_INPUT_GROUP_ADDON_CLASS,
   AUTH_INPUT_GROUP_CLASS,
@@ -45,11 +46,15 @@ type Props = {
 export function LoginForm({ className }: Props) {
   const ids = useId()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { login } = useAuth()
   const emailId = `${ids}-email`
   const passwordId = `${ids}-password`
   const rememberId = `${ids}-remember`
 
   const [showPassword, setShowPassword] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const {
     register,
@@ -58,14 +63,28 @@ export function LoginForm({ className }: Props) {
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: '', password: '', remember: false },
     mode: 'onTouched',
   })
 
-  function onSubmit(values: LoginFormValues) {
-    setSessionDisplayName(displayNameFromEmail(values.email))
-    navigate('/app/painel', { replace: true })
-    // Integração backend em etapa seguinte
+  async function onSubmit(values: LoginFormValues) {
+    setSubmitError(null)
+    setIsSubmitting(true)
+    try {
+      await login(
+        { email: values.email, password: values.password },
+        { remember: values.remember === true },
+      )
+      const redirectTo = (location.state as { redirectTo?: string } | null)?.redirectTo
+      navigate(
+        redirectTo && redirectTo.startsWith('/app') ? redirectTo : '/app/painel',
+        { replace: true },
+      )
+    } catch (e) {
+      setSubmitError(mapAuthErrorToUserMessage(e))
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -93,6 +112,15 @@ export function LoginForm({ className }: Props) {
           noValidate
           onSubmit={handleSubmit(onSubmit)}
         >
+          {submitError ? (
+            <div
+              className="border-destructive/50 bg-destructive/5 text-destructive flex items-start gap-2 rounded-lg border px-3 py-2 text-sm"
+              role="alert"
+            >
+              <AlertCircleIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <span>{submitError}</span>
+            </div>
+          ) : null}
           <FieldGroup className="gap-5">
             <Field data-invalid={errors.email ? true : undefined}>
               <FieldLabel htmlFor={emailId}>E-mail</FieldLabel>
@@ -174,7 +202,17 @@ export function LoginForm({ className }: Props) {
 
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <Checkbox id={rememberId} name="remember" />
+              <Controller
+                name="remember"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id={rememberId}
+                    checked={field.value === true}
+                    onCheckedChange={(v) => field.onChange(v === true)}
+                  />
+                )}
+              />
               <FieldLabel
                 htmlFor={rememberId}
                 className="text-muted-foreground font-normal"
@@ -190,9 +228,9 @@ export function LoginForm({ className }: Props) {
             </Link>
           </div>
 
-          <Button type="submit" size="lg" className="h-11 w-full gap-2 shadow-sm">
+          <Button type="submit" size="lg" className="h-11 w-full gap-2 shadow-sm" disabled={isSubmitting}>
             <LogInIcon className="size-4 shrink-0" aria-hidden />
-            Entrar
+            {isSubmitting ? 'A entrar…' : 'Entrar'}
           </Button>
 
           <div className="flex flex-col gap-10 pt-2">

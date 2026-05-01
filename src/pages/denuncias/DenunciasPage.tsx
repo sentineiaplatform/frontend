@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Archive,
   ArrowDownUp,
   Building2,
   BriefcaseBusiness,
   Calendar,
   Check,
+  CircleCheck,
   CircleDot,
+  CircleSlash,
   ClipboardList,
   Columns3,
   Download,
@@ -29,7 +30,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  Share2,
   ShieldAlert,
   SlidersHorizontal,
   TableProperties,
@@ -512,6 +512,11 @@ export function DenunciasPage() {
     () => denuncias.filter((d) => selecao.has(d.id)),
     [denuncias, selecao],
   )
+
+  const algumAtivoNaSelecao = useMemo(
+    () => registrosSelecionados.some((d) => d.ativa),
+    [registrosSelecionados],
+  )
   const qtdSelecionados = selecao.size
   const temSelecao = qtdSelecionados > 0
 
@@ -803,21 +808,6 @@ export function DenunciasPage() {
                   variant="outline"
                   size="icon-sm"
                   className="size-8"
-                  aria-label="Compartilhar seleção"
-                  onClick={() => toast.message(`${qtdSelecionados} link(s) (mock).`)}
-                >
-                  <Share2 className="size-3.5" strokeWidth={1.75} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Compartilhar</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  className="size-8"
                   aria-label="Atribuir analista"
                   onClick={() => toast.message(`Atribuir ${qtdSelecionados} caso(s).`)}
                 >
@@ -847,16 +837,38 @@ export function DenunciasPage() {
                   type="button"
                   variant="outline"
                   size="icon-sm"
-                  className="border-destructive/25 text-destructive hover:bg-destructive/10 size-8"
-                  aria-label="Arquivar selecionados"
-                  onClick={() =>
-                    toast.message(`${qtdSelecionados} arquivo(s) (simulado).`)
+                  className={
+                    algumAtivoNaSelecao
+                      ? 'border-destructive/25 text-destructive hover:bg-destructive/10 size-8'
+                      : 'size-8'
                   }
+                  aria-label={
+                    algumAtivoNaSelecao ? 'Inativar selecionados' : 'Ativar selecionados'
+                  }
+                  onClick={() => {
+                    const proxima = !algumAtivoNaSelecao
+                    setDenuncias((prev) =>
+                      prev.map((row) =>
+                        selecao.has(row.id) ? { ...row, ativa: proxima } : row,
+                      ),
+                    )
+                    toast.message(
+                      proxima
+                        ? `${qtdSelecionados} caso(s) ativado(s) (simulado).`
+                        : `${qtdSelecionados} caso(s) inativado(s) (simulado).`,
+                    )
+                  }}
                 >
-                  <Archive className="size-3.5" strokeWidth={1.75} />
+                  {algumAtivoNaSelecao ? (
+                    <CircleSlash className="size-3.5" strokeWidth={1.75} />
+                  ) : (
+                    <CircleCheck className="size-3.5" strokeWidth={1.75} />
+                  )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Arquivar</TooltipContent>
+              <TooltipContent>
+                {algumAtivoNaSelecao ? 'Inativar' : 'Ativar'}
+              </TooltipContent>
             </Tooltip>
             <div className="bg-border/60 mx-1 hidden h-5 w-px sm:block" aria-hidden />
             <Tooltip>
@@ -982,6 +994,7 @@ export function DenunciasPage() {
                     className={cn(
                       'group/table-row border-border/30 border-b transition-colors',
                       sel ? 'bg-muted/35' : 'hover:bg-muted/12',
+                      !d.ativa && 'opacity-[0.72]',
                     )}
                   >
                     <TableCell className={pinTdCheckbox(sel)}>
@@ -1106,36 +1119,45 @@ export function DenunciasPage() {
                             <button
                               type="button"
                               className={cn(
-                                'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background',
-                                'shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
+                                d.ativa
+                                  ? 'inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-destructive/40 bg-background text-destructive shadow-sm transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-destructive/30 focus-visible:outline-none'
+                                  : 'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
                               )}
-                              title="Compartilhar link"
-                              aria-label={`Compartilhar link — ${d.protocolo}`}
-                              onClick={() => toast.message(`Link gerado (${d.protocolo}).`)}
-                            >
-                              <Share2 className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">Compartilhar link</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className={cn(
-                                'inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-destructive/40 bg-background text-destructive',
-                                'shadow-sm transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-destructive/30 focus-visible:outline-none',
-                              )}
-                              title="Arquivar"
-                              aria-label={`Arquivar ${d.protocolo}`}
-                              onClick={() =>
-                                toast.message(`${d.protocolo} arquivado (simulado).`)
+                              title={d.ativa ? 'Inativar' : 'Ativar'}
+                              aria-label={
+                                d.ativa
+                                  ? `Inativar ${d.protocolo}`
+                                  : `Ativar ${d.protocolo}`
                               }
+                              onClick={() => {
+                                setDenuncias((prev) =>
+                                  prev.map((row) =>
+                                    row.id === d.id
+                                      ? { ...row, ativa: !row.ativa }
+                                      : row,
+                                  ),
+                                )
+                                toast.message(
+                                  d.ativa
+                                    ? `${d.protocolo} inativada (simulado).`
+                                    : `${d.protocolo} ativada (simulado).`,
+                                )
+                              }}
                             >
-                              <Archive className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+                              {d.ativa ? (
+                                <CircleSlash className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+                              ) : (
+                                <CircleCheck
+                                  className="size-4 shrink-0"
+                                  strokeWidth={2}
+                                  aria-hidden
+                                />
+                              )}
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent side="top">Arquivar</TooltipContent>
+                          <TooltipContent side="top">
+                            {d.ativa ? 'Inativar' : 'Ativar'}
+                          </TooltipContent>
                         </Tooltip>
                       </div>
                     </TableCell>
