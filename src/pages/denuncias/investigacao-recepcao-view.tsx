@@ -15,7 +15,7 @@ import {
   Users,
   X,
 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -36,6 +36,22 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import type { DenunciaMock } from '@/pages/denuncias/denuncias-mock'
+import {
+  addComment,
+  addInvolved,
+  deleteInvolved,
+  listComments,
+  listInvolved,
+  updateInvolved,
+  type InvestigationDto,
+} from '@/services/investigation-service'
+import {
+  createLink,
+  deleteLink,
+  listLinks,
+  LINK_TYPE_LABEL,
+  type ComplaintLinkDto,
+} from '@/services/complaint-link-service'
 import { InvestigacaoPainelConteudoOriginal } from '@/pages/denuncias/investigacao-painel-conteudo-original'
 import { InvestigacaoWorkspaceSecao } from '@/pages/denuncias/investigacao-workspace-secao'
 import {
@@ -93,13 +109,10 @@ const TRIAGEM_CHECKLIST: ReadonlyArray<{ acao: string; detalhe: string }> = [
   },
 ]
 
-const MOCK_SIMILARES = [
-  { protocolo: 'DEN-2026-00388', score: 0.82, motivo: 'Mesmo departamento · tema assédio moral' },
-  { protocolo: 'DEN-2026-00341', score: 0.61, motivo: 'Referências a reuniões com clientes' },
-]
 
 type Envolvido = {
-  id: string
+  localId: string
+  apiId?: string
   nome: string
   cargo: string
   area: string
@@ -127,6 +140,7 @@ function formatoData(iso: string) {
 export type InvestigacaoRecepcaoViewProps = Readonly<{
   denuncia: DenunciaMock
   phase?: CanonicalInvestigacaoPhase
+  investigation?: InvestigationDto | null
   steps: WorkflowRuntimeStep[]
   visualFlowOrder: number[]
   suggestedVisualPos: number
@@ -138,6 +152,7 @@ export type InvestigacaoRecepcaoViewProps = Readonly<{
 export function InvestigacaoRecepcaoView({
   denuncia,
   phase = 'recepcao',
+  investigation,
   steps,
   visualFlowOrder,
   suggestedVisualPos,
@@ -148,14 +163,7 @@ export function InvestigacaoRecepcaoView({
   const isTriagem = phase === 'triagem'
   const [envolvidos, setEnvolvidos] = useState<Envolvido[]>([])
   const [utilizadorInternoMock, setUtilizadorInternoMock] = useState<string | undefined>(undefined)
-  const [comentarios, setComentarios] = useState<ComentarioInterno[]>([
-    {
-      id: 'c0',
-      autor: 'triagem.pool',
-      quando: denuncia.atualizadoEm,
-      texto: 'Entrada validada — aguarda triagem.',
-    },
-  ])
+  const [comentarios, setComentarios] = useState<ComentarioInterno[]>([])
   const [novoComentario, setNovoComentario] = useState('')
   const [sugestaoIa, setSugestaoIa] = useState<{
     categoria?: string
@@ -163,12 +171,88 @@ export function InvestigacaoRecepcaoView({
     passos?: string
   } | null>(null)
   const [iaAssistenteAberto, setIaAssistenteAberto] = useState(false)
+  const [links, setLinks] = useState<ComplaintLinkDto[]>([])
+  const [vinculoProtocolo, setVinculoProtocolo] = useState('')
+  const [vinculoTipo, setVinculoTipo] = useState<'DUPLICATE' | 'RELATED' | 'FOLLOW_UP'>('RELATED')
+  const [vinculando, setVinculando] = useState(false)
+
+  const investigationId = investigation?.id ?? null
+
+  useEffect(() => {
+    if (!investigationId) return
+    listComments(investigationId)
+      .then((dtos) =>
+        setComentarios(
+          dtos.map((d) => ({ id: d.id, autor: d.authorName, quando: d.createdAt, texto: d.body })),
+        ),
+      )
+      .catch(() => {})
+  }, [investigationId])
+
+  useEffect(() => {
+    if (!investigationId) return
+    listInvolved(investigationId)
+      .then((dtos) =>
+        setEnvolvidos(
+          dtos.map((d) => ({
+            localId: d.id,
+            apiId: d.id,
+            nome: d.name,
+            cargo: d.roleTitle ?? '',
+            area: d.area ?? '',
+            tipo:
+              d.partyType === 'ACCUSED'
+                ? 'denunciado'
+                : d.partyType === 'WITNESS'
+                  ? 'testemunha'
+                  : 'vitima',
+          })),
+        ),
+      )
+      .catch(() => {})
+  }, [investigationId])
+
+  useEffect(() => {
+    if (!denuncia.id) return
+    listLinks(denuncia.id)
+      .then(setLinks)
+      .catch(() => {})
+  }, [denuncia.id])
+
+  const vincularDenuncia = useCallback(async () => {
+    const protocolo = vinculoProtocolo.trim()
+    if (!protocolo) { toast.message('Insira o protocolo da denúncia.'); return }
+    setVinculando(true)
+    try {
+      const link = await createLink(denuncia.id, { targetProtocol: protocolo, linkType: vinculoTipo })
+      setLinks((l) => [link, ...l])
+      setVinculoProtocolo('')
+      toast.success('Vínculo criado.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : ''
+      if (msg === 'duplicate') toast.error('Vínculo já existe.')
+      else if (msg === 'not_found') toast.error('Protocolo não encontrado.')
+      else toast.error('Erro ao criar vínculo.')
+    } finally {
+      setVinculando(false)
+    }
+  }, [denuncia.id, vinculoProtocolo, vinculoTipo])
+
+  const desvincularDenuncia = useCallback(async (link: ComplaintLinkDto) => {
+    try {
+      await deleteLink(denuncia.id, link.id)
+      setLinks((l) => l.filter((x) => x.id !== link.id))
+      toast.success('Vínculo removido.')
+    } catch {
+      toast.error('Erro ao remover vínculo.')
+    }
+  }, [denuncia.id])
 
   const adicionarEnvolvido = useCallback(() => {
     setEnvolvidos((list) => [
       ...list,
       {
-        id: `e-${Date.now()}`,
+        localId: `e-${Date.now()}`,
         nome: '',
         cargo: '',
         area: '',
@@ -177,24 +261,86 @@ export function InvestigacaoRecepcaoView({
     ])
   }, [])
 
-  const publicarComentario = useCallback(() => {
+  const guardarEnvolvido = useCallback(
+    async (e: Envolvido) => {
+      if (!investigationId) return
+      const partyType =
+        e.tipo === 'denunciado' ? 'ACCUSED' : e.tipo === 'testemunha' ? 'WITNESS' : 'VICTIM'
+      try {
+        if (e.apiId) {
+          await updateInvolved(investigationId, e.apiId, {
+            name: e.nome || '—',
+            roleTitle: e.cargo,
+            area: e.area,
+            partyType,
+          })
+          toast.success('Envolvido atualizado.')
+        } else {
+          const dto = await addInvolved(investigationId, {
+            name: e.nome || '—',
+            roleTitle: e.cargo,
+            area: e.area,
+            partyType,
+          })
+          setEnvolvidos((list) =>
+            list.map((x) => (x.localId === e.localId ? { ...x, apiId: dto.id } : x)),
+          )
+          toast.success('Envolvido guardado.')
+        }
+      } catch {
+        toast.error('Erro ao guardar envolvido.')
+      }
+    },
+    [investigationId],
+  )
+
+  const removerEnvolvido = useCallback(
+    async (e: Envolvido) => {
+      if (e.apiId && investigationId) {
+        try {
+          await deleteInvolved(investigationId, e.apiId)
+        } catch {
+          toast.error('Erro ao remover envolvido.')
+          return
+        }
+      }
+      setEnvolvidos((list) => list.filter((x) => x.localId !== e.localId))
+    },
+    [investigationId],
+  )
+
+  const publicarComentario = useCallback(async () => {
     const t = novoComentario.trim()
     if (!t) {
       toast.message('Escreva um comentário.')
       return
     }
-    setComentarios((c) => [
-      ...c,
-      {
-        id: `c-${Date.now()}`,
-        autor: 'utilizador.mock',
-        quando: new Date().toISOString().slice(0, 19),
-        texto: t,
-      },
-    ])
-    setNovoComentario('')
-    toast.message('Comentário registado (mock)')
-  }, [novoComentario])
+    if (investigationId) {
+      try {
+        const dto = await addComment(investigationId, 'utilizador.atual', t)
+        setComentarios((c) => [
+          ...c,
+          { id: dto.id, autor: dto.authorName, quando: dto.createdAt, texto: dto.body },
+        ])
+        setNovoComentario('')
+        toast.success('Comentário publicado.')
+      } catch {
+        toast.error('Erro ao publicar comentário.')
+      }
+    } else {
+      setComentarios((c) => [
+        ...c,
+        {
+          id: `c-${Date.now()}`,
+          autor: 'utilizador.mock',
+          quando: new Date().toISOString(),
+          texto: t,
+        },
+      ])
+      setNovoComentario('')
+      toast.message('Comentário registado (sem ligação ao servidor)')
+    }
+  }, [novoComentario, investigationId])
 
   return (
     <InvestigacaoWorkspaceShell
@@ -269,7 +415,7 @@ export function InvestigacaoRecepcaoView({
           >
             <div className="flex flex-wrap gap-1">
               {envolvidos.map((e) => (
-                <Badge key={e.id} variant="outline" className="h-6 gap-1 pr-1 text-[11px] font-normal">
+                <Badge key={e.localId} variant={e.apiId ? 'secondary' : 'outline'} className="h-6 gap-1 pr-1 text-[11px] font-normal">
                   <Avatar className="size-4">
                     <AvatarFallback className="text-[8px]">
                       {(e.nome || '?').slice(0, 2).toUpperCase()}
@@ -295,13 +441,13 @@ export function InvestigacaoRecepcaoView({
             ) : (
               <div className="space-y-1.5">
                 {envolvidos.map((e) => (
-                  <div key={e.id} className="border-border/50 grid grid-cols-1 gap-1.5 rounded-md border p-1.5 sm:grid-cols-2">
+                  <div key={e.localId} className="border-border/50 grid grid-cols-1 gap-1.5 rounded-md border p-1.5 sm:grid-cols-2">
                     <Input
                       placeholder="Nome"
                       value={e.nome}
                       onChange={(ev) => {
                         const v = ev.target.value
-                        setEnvolvidos((list) => list.map((x) => (x.id === e.id ? { ...x, nome: v } : x)))
+                        setEnvolvidos((list) => list.map((x) => (x.localId === e.localId ? { ...x, nome: v } : x)))
                       }}
                       className="h-8 text-xs"
                     />
@@ -310,7 +456,7 @@ export function InvestigacaoRecepcaoView({
                       value={e.cargo}
                       onChange={(ev) => {
                         const v = ev.target.value
-                        setEnvolvidos((list) => list.map((x) => (x.id === e.id ? { ...x, cargo: v } : x)))
+                        setEnvolvidos((list) => list.map((x) => (x.localId === e.localId ? { ...x, cargo: v } : x)))
                       }}
                       className="h-8 text-xs"
                     />
@@ -319,7 +465,7 @@ export function InvestigacaoRecepcaoView({
                       value={e.area}
                       onChange={(ev) => {
                         const v = ev.target.value
-                        setEnvolvidos((list) => list.map((x) => (x.id === e.id ? { ...x, area: v } : x)))
+                        setEnvolvidos((list) => list.map((x) => (x.localId === e.localId ? { ...x, area: v } : x)))
                       }}
                       className="h-8 text-xs sm:col-span-2"
                     />
@@ -328,7 +474,7 @@ export function InvestigacaoRecepcaoView({
                         value={e.tipo}
                         onValueChange={(v) =>
                           setEnvolvidos((list) =>
-                            list.map((x) => (x.id === e.id ? { ...x, tipo: v as Envolvido['tipo'] } : x)),
+                            list.map((x) => (x.localId === e.localId ? { ...x, tipo: v as Envolvido['tipo'] } : x)),
                           )
                         }
                       >
@@ -343,10 +489,20 @@ export function InvestigacaoRecepcaoView({
                       </Select>
                       <Button
                         type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="h-8 shrink-0 px-2 text-xs"
+                        onClick={() => guardarEnvolvido(e)}
+                        aria-label={`Guardar ${e.nome || 'pessoa'}`}
+                      >
+                        {e.apiId ? 'Atualizar' : 'Guardar'}
+                      </Button>
+                      <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
                         className="text-destructive h-8 shrink-0 px-2"
-                        onClick={() => setEnvolvidos((list) => list.filter((x) => x.id !== e.id))}
+                        onClick={() => removerEnvolvido(e)}
                         aria-label={`Remover ${e.nome || 'pessoa'}`}
                       >
                         <X className="size-3.5" aria-hidden />
@@ -382,51 +538,75 @@ export function InvestigacaoRecepcaoView({
           <InvestigacaoWorkspaceSecao
             variant="formulario"
             density="compact"
-            titulo="Duplicidade"
-            subtitulo="Sugestões mock — validar antes de vincular."
+            titulo="Vínculos entre denúncias"
+            subtitulo="Denúncias relacionadas, duplicadas ou de seguimento."
             tituloIcon={<GitCompare className="size-[1rem] sm:size-[1.05rem]" strokeWidth={2} aria-hidden />}
           >
-            <ul className="space-y-1">
-              {MOCK_SIMILARES.map((s) => (
-                <li
-                  key={s.protocolo}
-                  className="border-border/50 flex flex-wrap items-center justify-between gap-1 rounded-md border px-1.5 py-1"
-                >
-                  <div className="flex min-w-0 items-start gap-1.5">
-                    <FileSearch className="text-muted-foreground mt-0.5 size-3.5 shrink-0 opacity-85" aria-hidden />
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium">{s.protocolo}</p>
-                      <p className="text-muted-foreground text-[10px] leading-tight">{s.motivo}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Badge variant="secondary" className="h-5 px-1.5 tabular-nums text-[10px]">
-                      {(s.score * 100).toFixed(0)}%
-                    </Badge>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-6 gap-1 px-1.5 text-[10px]"
-                      onClick={() => toast.message('Vínculo (mock)', { description: s.protocolo })}
+            {links.length === 0 ? (
+              <p className="text-muted-foreground text-[11px]">Nenhum vínculo registado.</p>
+            ) : (
+              <ul className="space-y-1">
+                {links.map((lk) => {
+                  const outro = lk.source.id === denuncia.id ? lk.target : lk.source
+                  return (
+                    <li
+                      key={lk.id}
+                      className="border-border/50 flex flex-wrap items-center justify-between gap-1 rounded-md border px-1.5 py-1"
                     >
-                      <Link2 className="size-3 shrink-0" aria-hidden />
-                      Vincular
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="h-6 gap-1 px-2 text-[10px]"
-              onClick={() => toast.message('Pesquisa de duplicados (mock)')}
-            >
-              <GitCompare className="size-3 shrink-0" aria-hidden />
-              Buscar similares
-            </Button>
+                      <div className="flex min-w-0 items-start gap-1.5">
+                        <Link2 className="text-muted-foreground mt-0.5 size-3.5 shrink-0 opacity-85" aria-hidden />
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium">{outro.protocol}</p>
+                          <p className="text-muted-foreground text-[10px] leading-tight">
+                            {LINK_TYPE_LABEL[lk.linkType]}
+                            {lk.note ? ` · ${lk.note}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive h-6 shrink-0 px-1.5 text-[10px]"
+                        onClick={() => desvincularDenuncia(lk)}
+                        aria-label="Remover vínculo"
+                      >
+                        <X className="size-3 shrink-0" aria-hidden />
+                      </Button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+            <div className="flex gap-1">
+              <Input
+                placeholder="Protocolo (ex.: DEN-…)"
+                value={vinculoProtocolo}
+                onChange={(e) => setVinculoProtocolo(e.target.value)}
+                className="h-7 flex-1 text-[11px]"
+                onKeyDown={(e) => { if (e.key === 'Enter') vincularDenuncia() }}
+              />
+              <Select value={vinculoTipo} onValueChange={(v) => setVinculoTipo(v as typeof vinculoTipo)}>
+                <SelectTrigger className="h-7 w-28 text-[11px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="RELATED">Relacionada</SelectItem>
+                  <SelectItem value="DUPLICATE">Duplicada</SelectItem>
+                  <SelectItem value="FOLLOW_UP">Seguimento</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 px-2 text-[11px]"
+                onClick={vincularDenuncia}
+                disabled={vinculando}
+              >
+                <Link2 className="size-3 shrink-0" aria-hidden />
+                Vincular
+              </Button>
+            </div>
           </InvestigacaoWorkspaceSecao>
         </>
       }

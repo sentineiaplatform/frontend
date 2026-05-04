@@ -29,6 +29,7 @@ import {
   type DenunciaStatus,
 } from '@/pages/denuncias/denuncias-mock'
 import { fetchComplaintByProtocol } from '@/services/complaint-service'
+import { findOrCreateInvestigation, type InvestigationDto } from '@/services/investigation-service'
 import { InvestigacaoPainelConteudoOriginal } from '@/pages/denuncias/investigacao-painel-conteudo-original'
 import {
   InvestigacaoRecepcaoView,
@@ -288,6 +289,7 @@ export function DenunciaInvestigacaoPage() {
 
   const [denuncia, setDenuncia] = useState<DenunciaMock | undefined>(undefined)
   const [carregandoDenuncia, setCarregandoDenuncia] = useState(true)
+  const [investigation, setInvestigation] = useState<InvestigationDto | null>(null)
 
   useEffect(() => {
     if (!protocoloDecoded) {
@@ -297,7 +299,17 @@ export function DenunciaInvestigacaoPage() {
     let cancelado = false
     setCarregandoDenuncia(true)
     fetchComplaintByProtocol(protocoloDecoded)
-      .then((d) => { if (!cancelado) { setDenuncia(d); setCarregandoDenuncia(false) } })
+      .then(async (d) => {
+        if (cancelado) return
+        setDenuncia(d)
+        setCarregandoDenuncia(false)
+        try {
+          const inv = await findOrCreateInvestigation(d.id)
+          if (!cancelado) setInvestigation(inv)
+        } catch {
+          // falha não-fatal: investigação será null
+        }
+      })
       .catch((err: unknown) => {
         if (cancelado) return
         setCarregandoDenuncia(false)
@@ -393,6 +405,7 @@ export function DenunciaInvestigacaoPage() {
         <InvestigacaoRecepcaoView
           denuncia={denuncia}
           phase={phase}
+          investigation={investigation}
           steps={steps}
           visualFlowOrder={visualFlowOrder}
           suggestedVisualPos={suggestedVisualPos}

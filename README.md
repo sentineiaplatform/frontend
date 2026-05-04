@@ -1,73 +1,90 @@
-# React + TypeScript + Vite
+# SentineIA Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicação web da plataforma SentineIA para gestão de denúncias e compliance.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19 + TypeScript
+- Vite 8
+- Tailwind CSS 4 + shadcn/ui
+- React Router
+- React Hook Form + Zod
 
-## React Compiler
+## Requisitos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node.js 20+
+- npm 10+
 
-## Expanding the ESLint configuration
+## Configuração local
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. Entre na pasta do frontend:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd frontend
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. Instale dependências:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+npm install
+```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+3. Configure variáveis de ambiente:
+
+```bash
+cp .env.example .env
+```
+
+> A variável principal é `VITE_API_BASE_URL` (por padrão: `http://localhost:8080`).
+
+4. Inicie o servidor de desenvolvimento:
+
+```bash
+npm run dev
+```
+
+Aplicação disponível em `http://localhost:5173`.
+
+## Scripts disponíveis
+
+- `npm run dev`: inicia ambiente de desenvolvimento (HMR)
+- `npm run build`: valida TypeScript e gera build de produção
+- `npm run lint`: executa ESLint
+- `npm run preview`: serve localmente a build gerada
+
+## Estrutura principal
+
+```text
+src/
+  components/     # componentes reutilizáveis (ui, dialogs, auth, etc.)
+  contexts/       # providers globais (ex.: autenticação)
+  layouts/        # estruturas de layout (dashboard e áreas internas)
+  lib/            # utilitários e integrações base
+  pages/          # páginas e fluxos de negócio
+  services/       # serviços HTTP e regras de acesso a API
+```
+
+## Rotas principais
+
+- `/`: landing page institucional
+- `/login`: autenticação
+- `/cadastro`: cadastro de usuário
+- `/recuperar-senha` e `/redefinir-senha`: recuperação de acesso
+- `/app/*`: área autenticada (painel, denúncias, dados mestres, configurações)
+
+## Integração com backend
+
+- O frontend consome a API definida em `VITE_API_BASE_URL`.
+- Se a variável não estiver definida, usa `http://localhost:8080`.
+- Garanta que o backend esteja em execução antes de testar login e fluxos autenticados.
+
+## Convenções rápidas
+
+- Prefira componentes existentes em `src/components/ui`.
+- Mantenha textos e labels em português (pt-BR).
+- Antes de abrir PR, rode:
+
+```bash
+npm run lint
+npm run build
 ```
