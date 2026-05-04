@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -6,6 +6,7 @@ import {
   Building2Icon,
   CalendarDaysIcon,
   ChevronRightIcon,
+  ContrastIcon,
   GlobeIcon,
   LanguagesIcon,
   MinusIcon,
@@ -14,6 +15,7 @@ import {
   SlidersHorizontalIcon,
   XIcon,
 } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -64,12 +66,18 @@ import {
   CONFIG_GERAL_STORAGE_KEY,
   TIMEZONE_OPCOES,
 } from '@/pages/configuracoes/timezone-opcoes'
+import {
+  fetchGeneralSettings,
+  geralFormFromDto,
+  patchGeneralSettings,
+} from '@/services/general-settings-service'
 
 const defaultGeralValues: GeralFormValues = {
   organizationName: '',
   locale: 'pt-BR',
   dateFormat: 'dd/MM/yyyy',
   defaultTimezone: 'America/Sao_Paulo',
+  theme: 'system',
   uiZoom: '100',
 }
 
@@ -92,6 +100,8 @@ function readInitial(): GeralFormValues {
 export function ConfiguracoesGeralPage() {
   const initial = useMemo(() => readInitial(), [])
   const baselineRef = useRef<GeralFormValues>(initial)
+  const [serverSynced, setServerSynced] = useState(false)
+  const { setTheme } = useTheme()
 
   const {
     register,
@@ -104,10 +114,42 @@ export function ConfiguracoesGeralPage() {
     defaultValues: initial,
   })
 
-  function onSubmit(values: GeralFormValues) {
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const dto = await fetchGeneralSettings()
+        if (cancelled) return
+        const next = geralFormFromDto(dto)
+        baselineRef.current = next
+        reset(next)
+        applyUiZoomPercent(Number(next.uiZoom) as UiZoomPercent)
+        setTheme(next.theme)
+        setServerSynced(true)
+      } catch {
+        if (cancelled) return
+        setServerSynced(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [reset])
+
+  async function onSubmit(values: GeralFormValues) {
     const payload: GeralFormValues = {
       ...values,
       organizationName: values.organizationName.trim(),
+    }
+    if (serverSynced) {
+      try {
+        await patchGeneralSettings(payload)
+      } catch {
+        toast.error('Não foi possível guardar no servidor', {
+          description: 'Verifique a sessão ou tente novamente.',
+        })
+        return
+      }
     }
     try {
       localStorage.setItem(CONFIG_GERAL_STORAGE_KEY, JSON.stringify(payload))
@@ -120,13 +162,17 @@ export function ConfiguracoesGeralPage() {
     baselineRef.current = payload
     reset(payload)
     applyUiZoomPercent(Number(payload.uiZoom) as UiZoomPercent)
+    setTheme(payload.theme)
     toast.success('Configurações salvas', {
-      description: 'Preferências guardadas neste dispositivo.',
+      description: serverSynced
+        ? 'Preferências guardadas no servidor e neste dispositivo.'
+        : 'Preferências guardadas neste dispositivo.',
     })
   }
 
   function onCancel() {
     reset(baselineRef.current)
+    setTheme(baselineRef.current.theme)
     toast.message('Alterações descartadas.')
   }
 
@@ -142,12 +188,13 @@ export function ConfiguracoesGeralPage() {
               Geral
             </h1>
             <span className="text-muted-foreground bg-muted/50 border-border/50 inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase sm:text-[11px]">
-              Armazenamento local
+              {serverSynced ? 'Servidor + local' : 'Armazenamento local'}
             </span>
           </div>
           <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
-            Organização, regional (idioma, datas, fuso) e escala da interface. Claro/escuro continua no
-            menu lateral. Salvo só neste navegador até existir API.
+            Organização, regional (idioma, datas, fuso), tema e escala da interface. Com sessão válida, as
+            alterações sincronizam com a API; caso contrário ficam só neste navegador. O tema pode ser ajustado
+            aqui ou no menu lateral até gravar.
           </p>
         </div>
       </header>
@@ -373,13 +420,62 @@ export function ConfiguracoesGeralPage() {
                     Aparência
                   </FieldLegend>
                   <p className="text-muted-foreground mt-1 text-xs leading-snug">
-                    Zoom global neste navegador — texto e layout mantêm proporção.
+                    Tema (claro / escuro / sistema) e zoom global — aplicados ao gravar.
                   </p>
                 </div>
               </div>
 
               <FieldSet className="min-w-0 flex-1 gap-0 border-0 p-0 lg:max-w-xl">
-                <Field data-invalid={errors.uiZoom ? true : undefined} className="gap-3">
+                <FieldGroup className="gap-5">
+                  <Field data-invalid={errors.theme ? true : undefined}>
+                    <FieldLabel htmlFor="geral-theme" className="text-sm font-medium">
+                      Tema
+                    </FieldLabel>
+                    <Controller
+                      name="theme"
+                      control={control}
+                      render={({ field }) => (
+                        <InputGroup className={AUTH_INPUT_GROUP_CLASS}>
+                          <InputGroupAddon
+                            align="inline-start"
+                            className={AUTH_INPUT_GROUP_ADDON_CLASS}
+                          >
+                            <ContrastIcon className="size-4 shrink-0" aria-hidden />
+                          </InputGroupAddon>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger
+                              id="geral-theme"
+                              ref={field.ref}
+                              onBlur={field.onBlur}
+                              aria-invalid={errors.theme ? 'true' : undefined}
+                              className={AUTH_SELECT_TRIGGER_IN_GROUP_CLASS}
+                            >
+                              <SelectValue placeholder="Tema" />
+                            </SelectTrigger>
+                            <SelectContent position="popper" sideOffset={6} align="start" className="rounded-lg">
+                              <SelectItem value="light" className="rounded-md">
+                                Claro
+                              </SelectItem>
+                              <SelectItem value="dark" className="rounded-md">
+                                Escuro
+                              </SelectItem>
+                              <SelectItem value="system" className="rounded-md">
+                                Sistema
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </InputGroup>
+                      )}
+                    />
+                    {errors.theme ? (
+                      <FieldError className="flex items-start gap-2 [&>svg]:shrink-0">
+                        <AlertCircleIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
+                        <span>{errors.theme.message}</span>
+                      </FieldError>
+                    ) : null}
+                  </Field>
+
+                  <Field data-invalid={errors.uiZoom ? true : undefined} className="gap-3">
                   <FieldLabel className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
                     Escala da interface
                   </FieldLabel>
@@ -448,6 +544,7 @@ export function ConfiguracoesGeralPage() {
                     </FieldError>
                   ) : null}
                 </Field>
+                </FieldGroup>
               </FieldSet>
             </div>
           </div>
