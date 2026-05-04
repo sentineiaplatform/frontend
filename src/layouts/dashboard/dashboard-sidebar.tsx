@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from 'next-themes'
 import {
   BarChart3Icon,
@@ -10,9 +10,11 @@ import {
   InboxIcon,
   LayoutDashboardIcon,
   MoonIcon,
+  Search,
   SettingsIcon,
   SparklesIcon,
   SunIcon,
+  X,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -83,16 +85,55 @@ const dadosMestresSub = [
   { to: '/app/dados-mestres/workflows', label: 'Workflows' },
 ]
 
+type NavSearchItem = { to: string; label: string; group: string }
+
+const ALL_NAV_ITEMS: NavSearchItem[] = [
+  { to: '/app/painel', label: 'Painel', group: 'Principal' },
+  { to: '/app/denuncias', label: 'Denúncias', group: 'Principal' },
+  ...dadosMestresSub.map((s) => ({ ...s, group: 'Dados Mestres' })),
+  { to: '/app/recursos-pro', label: 'Recursos Pro', group: 'Geral' },
+  { to: '/app/configuracoes', label: 'Configurações', group: 'Geral' },
+  { to: '/app/ajuda', label: 'Ajuda', group: 'Geral' },
+]
+
 export function DashboardSidebar() {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const { theme, setTheme, resolvedTheme } = useTheme()
   const { state: sidebarState, setOpen: setSidebarOpen } = useSidebar()
   const [dadosMestresOpen, setDadosMestresOpen] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const [busca, setBusca] = useState('')
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Fecha busca ao navegar
+  useEffect(() => {
+    setBusca('')
+  }, [pathname])
+
+  const collapsed = sidebarState === 'collapsed'
+
+  const resultados = busca.trim().length > 0
+    ? ALL_NAV_ITEMS.filter((item) =>
+        item.label.toLowerCase().includes(busca.trim().toLowerCase()) ||
+        item.group.toLowerCase().includes(busca.trim().toLowerCase()),
+      )
+    : []
+
+  function abrirBusca() {
+    setSidebarOpen(true)
+    // aguarda expansão do sidebar antes de focar
+    setTimeout(() => searchInputRef.current?.focus(), 120)
+  }
+
+  function selecionarResultado(to: string) {
+    setBusca('')
+    navigate(to)
+  }
 
   const lightSelected =
     mounted &&
@@ -119,12 +160,85 @@ export function DashboardSidebar() {
           'group-data-[collapsible=icon]:min-h-0 group-data-[collapsible=icon]:overflow-hidden',
         )}
       >
-        {/* Navegação principal rolável */}
+        {/* Campo de busca */}
+        <div className="shrink-0 px-2 pb-1.5 group-data-[collapsible=icon]:px-1.5">
+          {collapsed ? (
+            <button
+              type="button"
+              aria-label="Abrir busca de menus"
+              onClick={abrirBusca}
+              className="flex w-full items-center justify-center rounded-md p-1.5 text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <Search className="size-4 shrink-0" strokeWidth={1.75} />
+            </button>
+          ) : (
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-white/40"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar…"
+                aria-label="Buscar menus e submenus"
+                className={cn(
+                  'w-full rounded-md border border-white/10 bg-white/[0.06] py-1.5 pr-7 pl-8',
+                  'text-[12px] text-white placeholder:text-white/35',
+                  'outline-none transition-colors focus:border-white/25 focus:bg-white/[0.09]',
+                )}
+              />
+              {busca.length > 0 && (
+                <button
+                  type="button"
+                  aria-label="Limpar busca"
+                  onClick={() => { setBusca(''); searchInputRef.current?.focus() }}
+                  className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5 text-white/40 hover:text-white/80"
+                >
+                  <X className="size-3" strokeWidth={2} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Resultados da busca (substitui a nav quando há query) */}
+        {!collapsed && busca.trim().length > 0 && (
+          <div className="shrink-0 overflow-y-auto px-2 pb-2">
+            {resultados.length === 0 ? (
+              <p className="px-1 py-3 text-center text-[11px] text-white/40">Nenhum resultado.</p>
+            ) : (
+              <ul className="flex flex-col gap-0.5">
+                {resultados.map((item) => (
+                  <li key={item.to}>
+                    <button
+                      type="button"
+                      onClick={() => selecionarResultado(item.to)}
+                      className={cn(
+                        'flex w-full flex-col rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-white/10',
+                        pathname === item.to && 'bg-white/[0.13]',
+                      )}
+                    >
+                      <span className="text-[12.5px] font-medium text-white/90">{item.label}</span>
+                      <span className="text-[10px] text-white/40">{item.group}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {/* Navegação principal rolável — oculta durante busca */}
         <div
           className={cn(
             'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain pb-2',
             '[scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,.2)_transparent]',
             'touch-pan-y',
+            !collapsed && busca.trim().length > 0 && 'hidden',
           )}
         >
           <SidebarGroup className="p-0">
