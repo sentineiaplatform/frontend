@@ -21,14 +21,14 @@ export type DenunciaMetadadosEntradaMock = {
 export type DenunciaMock = {
   id: string
   protocolo: string
+  /** Título resumido da denúncia (campo {@code title} do backend). */
+  titulo: string
   registradoEm: string
   categoria: string
   status: DenunciaStatus
   canal: string
   prioridade: DenunciaPrioridade
   departamento: string
-  areaDemanda: string
-  tipoEntrada: string
   atualizadoEm: string
   /** Evidências anexadas pelo denunciante no canal de entrada. */
   evidencias: DenunciaEvidenciaMock[]
@@ -38,16 +38,15 @@ export type DenunciaMock = {
   metadadosEntrada: DenunciaMetadadosEntradaMock
   /** Prazo de SLA para triagem inicial, em horas após registradoEm. */
   slaTriagemHoras: number
-  /** Caso inativo na fila (mock); não confundir com status do fluxo (aberta/em análise/encerrada). */
+  /** Caso inativo na fila; não confundir com status do fluxo. */
   ativa: boolean
 }
 
 type DenunciaRowBase = Omit<
   DenunciaMock,
+  | 'titulo'
   | 'prioridade'
   | 'departamento'
-  | 'areaDemanda'
-  | 'tipoEntrada'
   | 'atualizadoEm'
   | 'evidencias'
   | 'relatoOriginal'
@@ -231,24 +230,6 @@ export const DENUNCIA_DEPARTAMENTOS_MOCK = [
   'Gestão de risco',
 ] as const
 
-/** Áreas demandadas na listagem. */
-export const DENUNCIA_AREAS_DEMANDA_MOCK = [
-  'Ética e conduta corporativa',
-  'Investigações internas — Nível II',
-  'Canal público estadual federado',
-  'Antitruste e políticas internas',
-  'SLA institucional de 3ª linha',
-] as const
-
-/** Tipos de entrada (“Entrada”) na listagem. */
-export const DENUNCIA_TIPOS_ENTRADA_MOCK = [
-  'Portal anônimo certificado',
-  'Integração webhook ouvidoria.se',
-  'Import CSV — triagem inicial',
-  'API parceiros — canal seguro',
-  'Registro físico auditável',
-] as const
-
 /** Canais usados na listagem. */
 export const DENUNCIA_CANAIS_MOCK = [
   'Canal web',
@@ -329,16 +310,15 @@ function evidenciasMockDenuncia(idx: number, registradoEm: string): DenunciaEvid
   return list
 }
 
-/** Dados fictícios até integração com API — colunas extras para simular lista larga. */
+/** Dados fictícios para a página de investigação (mock; a listagem usa a API). */
 export const DENUNCIAS_MOCK: DenunciaMock[] = DENUNCIA_BASE_ROWS.map((row, idx) => {
   const dias = idx % 5
   const prioridade = PRIORIDS[idx % PRIORIDS.length]
   return {
     ...row,
+    titulo: `${row.categoria} — denúncia ${row.protocolo}`,
     prioridade,
     departamento: DENUNCIA_DEPARTAMENTOS_MOCK[idx % DENUNCIA_DEPARTAMENTOS_MOCK.length],
-    areaDemanda: DENUNCIA_AREAS_DEMANDA_MOCK[idx % DENUNCIA_AREAS_DEMANDA_MOCK.length],
-    tipoEntrada: DENUNCIA_TIPOS_ENTRADA_MOCK[idx % DENUNCIA_TIPOS_ENTRADA_MOCK.length],
     atualizadoEm: dataAtualizacaoIso(row.registradoEm, dias),
     evidencias: evidenciasMockDenuncia(idx, row.registradoEm),
     relatoOriginal: relatoOriginalMock(row.protocolo, row.categoria),

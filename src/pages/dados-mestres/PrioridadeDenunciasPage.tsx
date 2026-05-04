@@ -17,6 +17,7 @@ import {
   ToggleLeft,
   X,
 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
 import { useConfirmDialog } from '@/components/dialogs/confirm-dialog-context'
@@ -358,7 +359,7 @@ export function PrioridadeDenunciasPage() {
           </TableHeader>
           <TableBody className="[&_td]:whitespace-normal">
             {carregando ? (
-              <TableRow><TableCell colSpan={7} className="text-muted-foreground py-14 text-center text-sm">Carregando…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="py-14 text-center"><Spinner className="mx-auto size-5 text-muted-foreground/50" /></TableCell></TableRow>
             ) : linhas.length === 0 ? (
               <TableRow><TableCell colSpan={7} className="text-muted-foreground py-14 text-center text-sm">Nenhum resultado. Ajuste filtros ou busca.</TableCell></TableRow>
             ) : (

@@ -50,40 +50,27 @@ export type TransitionEdgeData = {
 export type WfNode = Node<StatusNodeData, 'statusNode'>
 export type WfEdge = Edge<TransitionEdgeData>
 
-/** Grafo de demonstração (4 nós + transições). */
+/** Grafo de demonstração (3 nós + transições) — Triagem é o passo inicial (receção integrada). */
 export function createDemoWorkflowGraph(): { nodes: WfNode[]; edges: WfEdge[] } {
-  const a = WORKFLOW_STATUS_OPTIONS[0]!
   const b = WORKFLOW_STATUS_OPTIONS[1]!
   const c = WORKFLOW_STATUS_OPTIONS[2]!
   const d = WORKFLOW_STATUS_OPTIONS[4]!
-  const n1: WfNode = {
-    id: 'demo-n1',
+  const n2: WfNode = {
+    id: 'demo-n2',
     type: 'statusNode',
     position: { x: 40, y: 200 },
     data: {
-      label: 'Receção',
-      statusId: a.id,
+      label: 'Triagem',
+      statusId: b.id,
       isInitial: true,
       isTerminal: false,
       colorPreset: 'blue',
     },
   }
-  const n2: WfNode = {
-    id: 'demo-n2',
-    type: 'statusNode',
-    position: { x: 300, y: 80 },
-    data: {
-      label: 'Triagem',
-      statusId: b.id,
-      isInitial: false,
-      isTerminal: false,
-      colorPreset: 'default',
-    },
-  }
   const n3: WfNode = {
     id: 'demo-n3',
     type: 'statusNode',
-    position: { x: 120, y: 340 },
+    position: { x: 280, y: 200 },
     data: {
       label: 'Investigação',
       statusId: c.id,
@@ -95,7 +82,7 @@ export function createDemoWorkflowGraph(): { nodes: WfNode[]; edges: WfEdge[] } 
   const n4: WfNode = {
     id: 'demo-n4',
     type: 'statusNode',
-    position: { x: 480, y: 200 },
+    position: { x: 520, y: 200 },
     data: {
       label: 'Encerramento',
       statusId: d.id,
@@ -106,48 +93,34 @@ export function createDemoWorkflowGraph(): { nodes: WfNode[]; edges: WfEdge[] } 
   }
   const e1: WfEdge = {
     id: 'demo-e1',
-    source: n1.id,
-    target: n2.id,
+    source: n2.id,
+    target: n3.id,
     sourceHandle: WF_HANDLE.outR,
     targetHandle: WF_HANDLE.inL,
     type: 'default',
-    label: 'Submeter',
+    label: 'Investigar',
     data: {
-      label: 'Submeter',
-      roles: ['TRIADOR'],
+      label: 'Investigar',
+      roles: ['ADMIN', 'INVESTIGADOR'],
       requiredFields: ['RESUMO'],
     },
   }
   const e2: WfEdge = {
     id: 'demo-e2',
-    source: n1.id,
-    target: n3.id,
-    sourceHandle: WF_HANDLE.outB,
-    targetHandle: WF_HANDLE.inT,
-    type: 'default',
-    label: 'Prioridade',
-    data: {
-      label: 'Prioridade',
-      roles: ['ADMIN', 'INVESTIGADOR'],
-      requiredFields: ['MOTIVO_ENCERRAMENTO'],
-    },
-  }
-  const e3: WfEdge = {
-    id: 'demo-e3',
     source: n2.id,
     target: n4.id,
     sourceHandle: WF_HANDLE.outB,
     targetHandle: WF_HANDLE.inT,
     type: 'default',
-    label: 'Encerrar',
+    label: 'Encerrar direto',
     data: {
-      label: 'Encerrar',
-      roles: ['TRIADOR', 'INVESTIGADOR'],
+      label: 'Encerrar direto',
+      roles: ['TRIADOR'],
       requiredFields: ['MOTIVO_ENCERRAMENTO', 'RESUMO'],
     },
   }
-  const e4: WfEdge = {
-    id: 'demo-e4',
+  const e3: WfEdge = {
+    id: 'demo-e3',
     source: n3.id,
     target: n4.id,
     sourceHandle: WF_HANDLE.outR,
@@ -160,5 +133,5 @@ export function createDemoWorkflowGraph(): { nodes: WfNode[]; edges: WfEdge[] } 
       requiredFields: ['RESUMO', 'ANEXO_OPCIONAL'],
     },
   }
-  return { nodes: [n1, n2, n3, n4], edges: [e1, e2, e3, e4] }
+  return { nodes: [n2, n3, n4], edges: [e1, e2, e3] }
 }

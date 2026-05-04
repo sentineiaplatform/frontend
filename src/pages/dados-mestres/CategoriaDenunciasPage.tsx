@@ -62,6 +62,7 @@ import {
   fetchComplaintCategories,
   updateComplaintCategory,
 } from '@/services/complaint-category-service'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
 function textoPlanoPreview(html: string, max = 160): string {
@@ -526,11 +527,8 @@ export function CategoriaDenunciasPage() {
           <TableBody className="[&_td]:whitespace-normal">
             {carregando ? (
               <TableRow>
-                <TableCell
-                  colSpan={colSpanVazio}
-                  className="text-muted-foreground py-14 text-center text-sm"
-                >
-                  Carregando…
+                <TableCell colSpan={colSpanVazio} className="py-14 text-center">
+                  <Spinner className="mx-auto size-5 text-muted-foreground/50" />
                 </TableCell>
               </TableRow>
             ) : linhas.length === 0 ? (

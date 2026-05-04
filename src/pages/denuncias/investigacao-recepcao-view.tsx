@@ -1,31 +1,21 @@
 import {
   AlertCircle,
-  AlertTriangle,
   Bot,
-  Building2,
-  Cog,
+  ClipboardCheck,
   FileSearch,
   FileText,
   GitCompare,
-  Hash,
   History,
   Link2,
-  ListFilter,
-  Megaphone,
   MessageSquare,
-  Scale,
   SendHorizontal,
-  ShieldAlert,
   Sparkles,
-  Tags,
-  Tag,
   UserPlus,
   UserRound,
   Users,
-  Wallet,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -52,29 +42,56 @@ import {
   InvestigacaoWorkspaceShell,
   type InvestigacaoShellVoltar,
 } from '@/pages/denuncias/investigacao-workspace-shell'
+import type { CanonicalInvestigacaoPhase } from '@/pages/denuncias/investigacao-workspace-canonical'
 import type { WorkflowRuntimeStep } from '@/pages/denuncias/workflow-runtime'
 
-const CATEGORIAS_BASE = ['Assédio', 'Fraude', 'Ética', 'Compliance', 'Outros'] as const
+const MOCK_RESPONSAVEIS = ['Maria Silva · Compliance', 'João Costa · RH', 'Equipa triagem · Pool']
 
-const SUBCATEGORIAS: Record<(typeof CATEGORIAS_BASE)[number], string[]> = {
-  Assédio: ['Moral', 'Sexual', 'Discriminação', 'Outro'],
-  Fraude: ['Suborno', 'Desvio', 'Conflito de interesse', 'Outro'],
-  Ética: ['Conduta', 'Integridade', 'Outro'],
-  Compliance: ['Política interna', 'Regulamentar', 'Outro'],
-  Outros: ['A classificar', 'Misto'],
+function TriagemCheckItem({ acao, detalhe }: { acao: string; detalhe: string }) {
+  const [checked, setChecked] = useState(false)
+  return (
+    <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border/50 bg-background px-2.5 py-2 hover:bg-muted/30 transition-colors">
+      <Checkbox
+        className="mt-0.5 size-4 shrink-0"
+        checked={checked}
+        onCheckedChange={(v) => setChecked(Boolean(v))}
+      />
+      <div className="min-w-0">
+        <p className={cn('text-xs font-medium leading-snug', checked && 'line-through text-muted-foreground')}>
+          {acao}
+        </p>
+        <p className="text-muted-foreground text-[11px] leading-snug mt-0.5">{detalhe}</p>
+      </div>
+    </label>
+  )
 }
 
-const AREAS_ENVOLVIDAS = ['Financeiro', 'RH', 'TI', 'Operações', 'Compliance', 'Jurídico', 'Outra']
-
-const RISCOS_OPCOES = [
-  { id: 'reputacional', label: 'Reputacional', Icon: Megaphone },
-  { id: 'legal', label: 'Legal / regulatório', Icon: Scale },
-  { id: 'operacional', label: 'Operacional', Icon: Cog },
-  { id: 'seguranca', label: 'Segurança / SST', Icon: ShieldAlert },
-  { id: 'financeiro', label: 'Financeiro', Icon: Wallet },
-] as const
-
-const MOCK_RESPONSAVEIS = ['Maria Silva · Compliance', 'João Costa · RH', 'Equipa triagem · Pool']
+const TRIAGEM_CHECKLIST: ReadonlyArray<{ acao: string; detalhe: string }> = [
+  {
+    acao: 'Admissibilidade',
+    detalhe: 'Verificar se o relato não é vazio, ofensivo, fora de âmbito, duplicado ou manifestamente infundado.',
+  },
+  {
+    acao: 'Complementação',
+    detalhe: 'Solicitar fato, data, local ou testemunhas em falta — sem violar anonimato desnecessariamente.',
+  },
+  {
+    acao: 'Prioridade de risco',
+    detalhe: 'Avaliar gravidade, urgência (segurança, SST, suborno) e exposição da organização.',
+  },
+  {
+    acao: 'Conflito de interesse',
+    detalhe: 'Verificar se o triador ou investigador deve ser afastado; reatribuir se necessário.',
+  },
+  {
+    acao: 'Decisão de rota',
+    detalhe: 'Abrir investigação formal, acionar ação corretiva leve, encaminhar a outro comitê, ou arquivar com motivo.',
+  },
+  {
+    acao: 'Documentar decisão',
+    detalhe: 'Registar a fundamentação da triagem de forma não identificante onde couber.',
+  },
+]
 
 const MOCK_SIMILARES = [
   { protocolo: 'DEN-2026-00388', score: 0.82, motivo: 'Mesmo departamento · tema assédio moral' },
@@ -107,17 +124,9 @@ function formatoData(iso: string) {
   }
 }
 
-function mapCategoriaInicial(cat: string): (typeof CATEGORIAS_BASE)[number] {
-  const n = cat.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
-  if (n.includes('assedio') || n.includes('discrimin')) return 'Assédio'
-  if (n.includes('fraude') || n.includes('corrup')) return 'Fraude'
-  if (n.includes('seguranca') || n.includes('informacao')) return 'Compliance'
-  if (n.includes('conflito') || n.includes('etica')) return 'Ética'
-  return 'Outros'
-}
-
 export type InvestigacaoRecepcaoViewProps = Readonly<{
   denuncia: DenunciaMock
+  phase?: CanonicalInvestigacaoPhase
   steps: WorkflowRuntimeStep[]
   visualFlowOrder: number[]
   suggestedVisualPos: number
@@ -128,6 +137,7 @@ export type InvestigacaoRecepcaoViewProps = Readonly<{
 
 export function InvestigacaoRecepcaoView({
   denuncia,
+  phase = 'recepcao',
   steps,
   visualFlowOrder,
   suggestedVisualPos,
@@ -135,16 +145,7 @@ export function InvestigacaoRecepcaoView({
   setWorkspaceStepIndex,
   voltarPara,
 }: InvestigacaoRecepcaoViewProps) {
-  const catInicial = mapCategoriaInicial(denuncia.categoria)
-  const [categoria, setCategoria] = useState<(typeof CATEGORIAS_BASE)[number]>(catInicial)
-  const [subcategoria, setSubcategoria] = useState(() => SUBCATEGORIAS[catInicial][0]!)
-  const [gravidade, setGravidade] = useState<'baixa' | 'media' | 'alta' | 'critica'>('media')
-  const [areaEnvolvida, setAreaEnvolvida] = useState(() => {
-    const d = denuncia.departamento.toLowerCase()
-    return AREAS_ENVOLVIDAS.find((a) => d.includes(a.toLowerCase())) ?? 'Outra'
-  })
-  const [riscos, setRiscos] = useState<Record<string, boolean>>({})
-  const [tagsLivres, setTagsLivres] = useState('')
+  const isTriagem = phase === 'triagem'
   const [envolvidos, setEnvolvidos] = useState<Envolvido[]>([])
   const [utilizadorInternoMock, setUtilizadorInternoMock] = useState<string | undefined>(undefined)
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([
@@ -152,7 +153,7 @@ export function InvestigacaoRecepcaoView({
       id: 'c0',
       autor: 'triagem.pool',
       quando: denuncia.atualizadoEm,
-      texto: 'Entrada validada — aguarda classificação inicial.',
+      texto: 'Entrada validada — aguarda triagem.',
     },
   ])
   const [novoComentario, setNovoComentario] = useState('')
@@ -162,23 +163,6 @@ export function InvestigacaoRecepcaoView({
     passos?: string
   } | null>(null)
   const [iaAssistenteAberto, setIaAssistenteAberto] = useState(false)
-
-  useEffect(() => {
-    const subs = SUBCATEGORIAS[categoria]
-    setSubcategoria((s) => (subs.includes(s) ? s : subs[0]!))
-  }, [categoria])
-
-  const alternarRisco = useCallback((id: string) => {
-    setRiscos((prev) => ({ ...prev, [id]: !prev[id] }))
-  }, [])
-
-  const aplicarSugestaoClassificacao = useCallback(() => {
-    setCategoria('Assédio')
-    setSubcategoria('Moral')
-    setGravidade('alta')
-    setRiscos((r) => ({ ...r, reputacional: true, legal: true }))
-    toast.success('Sugestão aplicada (mock)', { description: 'Categoria e riscos atualizados.' })
-  }, [])
 
   const adicionarEnvolvido = useCallback(() => {
     setEnvolvidos((list) => [
@@ -224,124 +208,20 @@ export function InvestigacaoRecepcaoView({
       leftColumn={<InvestigacaoPainelConteudoOriginal denuncia={denuncia} />}
       centerColumn={
         <>
+            {isTriagem && (
               <InvestigacaoWorkspaceSecao
                 variant="formulario"
-                titulo="Classificação inicial"
-                subtitulo="Alinhar ao relato antes de encaminhar."
-                tituloIcon={<ListFilter className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={2} aria-hidden />}
+                titulo="Checklist de triagem"
+                subtitulo="Verificar cada ponto antes de definir a rota da denúncia."
+                tituloIcon={<ClipboardCheck className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={2} aria-hidden />}
               >
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label className="flex items-center gap-1.5 text-[11px]">
-                      <Tags className="text-muted-foreground size-3 shrink-0" aria-hidden />
-                      Categoria
-                    </Label>
-                    <Select
-                      value={categoria}
-                      onValueChange={(v) => setCategoria(v as (typeof CATEGORIAS_BASE)[number])}
-                    >
-                      <SelectTrigger className="h-8 w-full text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIAS_BASE.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="flex items-center gap-1.5 text-[11px]">
-                      <Tag className="text-muted-foreground size-3 shrink-0" aria-hidden />
-                      Subcategoria
-                    </Label>
-                    <Select value={subcategoria} onValueChange={setSubcategoria}>
-                      <SelectTrigger className="h-8 w-full text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SUBCATEGORIAS[categoria].map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="flex items-center gap-1.5 text-[11px]">
-                      <AlertTriangle className="text-muted-foreground size-3 shrink-0" aria-hidden />
-                      Gravidade
-                    </Label>
-                    <Select value={gravidade} onValueChange={(v) => setGravidade(v as typeof gravidade)}>
-                      <SelectTrigger className="h-8 w-full text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="baixa">Baixa</SelectItem>
-                        <SelectItem value="media">Média</SelectItem>
-                        <SelectItem value="alta">Alta</SelectItem>
-                        <SelectItem value="critica">Crítica</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="flex items-center gap-1.5 text-[11px]">
-                      <Building2 className="text-muted-foreground size-3 shrink-0" aria-hidden />
-                      Área envolvida
-                    </Label>
-                    <Select value={areaEnvolvida} onValueChange={setAreaEnvolvida}>
-                      <SelectTrigger className="h-8 w-full text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {AREAS_ENVOLVIDAS.map((a) => (
-                          <SelectItem key={a} value={a}>
-                            {a}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="flex items-center gap-1.5 text-[11px]">
-                    <ShieldAlert className="text-muted-foreground size-3 shrink-0" aria-hidden />
-                    Tipo de risco
-                  </Label>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1.5">
-                    {RISCOS_OPCOES.map((r) => {
-                      const RiscoIcon = r.Icon
-                      return (
-                        <label key={r.id} className="flex cursor-pointer items-center gap-1.5 text-[11px]">
-                          <Checkbox
-                            className="size-3.5"
-                            checked={Boolean(riscos[r.id])}
-                            onCheckedChange={() => alternarRisco(r.id)}
-                          />
-                          <RiscoIcon className="text-muted-foreground size-3 shrink-0 opacity-90" aria-hidden />
-                          {r.label}
-                        </label>
-                      )
-                    })}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="tags-rececao" className="flex items-center gap-1.5 text-[11px]">
-                    <Hash className="text-muted-foreground size-3 shrink-0" aria-hidden />
-                    Tags
-                  </Label>
-                  <Input
-                    id="tags-rececao"
-                    placeholder="reunião, cliente…"
-                    value={tagsLivres}
-                    onChange={(e) => setTagsLivres(e.target.value)}
-                    className="h-8 text-xs"
-                  />
+                <div className="space-y-2">
+                  {TRIAGEM_CHECKLIST.map((item) => (
+                    <TriagemCheckItem key={item.acao} acao={item.acao} detalhe={item.detalhe} />
+                  ))}
                 </div>
               </InvestigacaoWorkspaceSecao>
+            )}
 
             <InvestigacaoWorkspaceSecao
               variant="formulario"
@@ -705,7 +585,7 @@ export function InvestigacaoRecepcaoView({
                     </p>
                   ) : null}
                   <div className="flex gap-2 pt-1">
-                    <Button type="button" size="sm" className="h-8 flex-1 text-xs font-medium" onClick={aplicarSugestaoClassificacao}>
+                    <Button type="button" size="sm" className="h-8 flex-1 text-xs font-medium" onClick={() => { setSugestaoIa(null); toast.success('Sugestão registada (mock)') }}>
                       Aplicar
                     </Button>
                     <Button

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { FileText, Gauge, TextAlignStart, ToggleLeft } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
 import {
@@ -142,7 +143,7 @@ export function PrioridadeDenunciaFormPage() {
   }
 
   if (isEdit && carregandoDetalhe) {
-    return <div className="text-muted-foreground p-8 text-center text-sm">Carregando…</div>
+    return <div className="flex items-center justify-center p-8"><Spinner className="size-5 text-muted-foreground/50" /></div>
   }
 
   return (

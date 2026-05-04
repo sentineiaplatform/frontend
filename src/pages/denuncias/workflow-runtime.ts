@@ -122,7 +122,7 @@ export function inferInitialWorkflowStepIndex(steps: WorkflowRuntimeStep[]): num
   const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
   const recIdx = steps.findIndex((s) => {
     const l = norm(s.label)
-    return l.includes('rececao') || l.includes('recepcao') || l.includes('recep')
+    return l.includes('triagem') || l.includes('classific') || l.includes('rececao') || l.includes('recepcao') || l.includes('recep')
   })
   if (recIdx >= 0) return recIdx
   return 0

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowDownUp,
@@ -9,7 +9,6 @@ import {
   CircleCheck,
   CircleDot,
   CircleSlash,
-  ClipboardList,
   Columns3,
   Download,
   Eye,
@@ -26,7 +25,6 @@ import {
   MessageSquare,
   Phone,
   PhoneCall,
-  Plug,
   Plus,
   RefreshCw,
   Search,
@@ -35,6 +33,7 @@ import {
   TableProperties,
   Tags,
   UserPlus,
+  UserRound,
   X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -82,12 +81,14 @@ import {
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import {
-  DENUNCIAS_MOCK,
   hrefInvestigacaoDenuncia,
+  type DenunciaAnonimato,
   type DenunciaMock,
   type DenunciaPrioridade,
   type DenunciaStatus,
 } from '@/pages/denuncias/denuncias-mock'
+import { fetchComplaints } from '@/services/complaint-service'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
 const LINHAS_OPCOES = [10, 20, 35, 50] as const
@@ -119,7 +120,7 @@ type CampoKanbanDenuncias =
   | 'canal'
   | 'categoria'
   | 'departamento'
-  | 'tipoEntrada'
+  | 'anonimato'
 
 const ROTULO_CAMPO_KANBAN: Record<CampoKanbanDenuncias, string> = {
   status: 'Status',
@@ -127,7 +128,7 @@ const ROTULO_CAMPO_KANBAN: Record<CampoKanbanDenuncias, string> = {
   canal: 'Canal',
   categoria: 'Categoria',
   departamento: 'Departamento',
-  tipoEntrada: 'Tipo de entrada',
+  anonimato: 'Anonimato',
 }
 
 const ORDEM_STATUS_KANBAN: DenunciaStatus[] = ['aberta', 'em_analise', 'encerrada']
@@ -147,8 +148,8 @@ function groupByDenunciaCampoKanban(
       return d.categoria
     case 'departamento':
       return d.departamento
-    case 'tipoEntrada':
-      return d.tipoEntrada
+    case 'anonimato':
+      return d.anonimato
     default:
       return ''
   }
@@ -198,8 +199,8 @@ function aplicarValorCampoKanban(
       return { ...d, categoria: chaveColuna, atualizadoEm }
     case 'departamento':
       return { ...d, departamento: chaveColuna, atualizadoEm }
-    case 'tipoEntrada':
-      return { ...d, tipoEntrada: chaveColuna, atualizadoEm }
+    case 'anonimato':
+      return { ...d, anonimato: chaveColuna as DenunciaAnonimato, atualizadoEm }
     default:
       return d
   }
@@ -279,14 +280,14 @@ function CabecalhoColuna({
 function exportarCsv(linhas: DenunciaMock[]) {
   const header = [
     'protocolo',
+    'titulo',
     'registrado_em',
     'categoria',
     'canal',
     'status',
     'prioridade',
     'departamento',
-    'area_demanda',
-    'tipo_entrada',
+    'anonimato',
     'atualizado_em',
     'qtd_evidencias',
   ]
@@ -294,14 +295,14 @@ function exportarCsv(linhas: DenunciaMock[]) {
   const body = linhas.map((d) =>
     [
       d.protocolo,
+      d.titulo,
       d.registradoEm,
       d.categoria,
       d.canal,
       STATUS_LABEL[d.status],
       d.prioridade,
       d.departamento,
-      d.areaDemanda,
-      d.tipoEntrada,
+      d.anonimato,
       d.atualizadoEm,
       String(d.evidencias.length),
     ]
@@ -349,9 +350,8 @@ function pinTdAcoes(sel: boolean) {
 }
 
 export function DenunciasPage() {
-  const [denuncias, setDenuncias] = useState<DenunciaMock[]>(() =>
-    DENUNCIAS_MOCK.map((row) => ({ ...row })),
-  )
+  const [denuncias, setDenuncias] = useState<DenunciaMock[]>([])
+  const [carregando, setCarregando] = useState(true)
   const [pagina, setPagina] = useState(1)
   const [itensPorPagina, setItensPorPagina] = useState(20)
   const [busca, setBusca] = useState('')
@@ -367,6 +367,22 @@ export function DenunciasPage() {
   const [campoKanban, setCampoKanban] = useState<CampoKanbanDenuncias>('status')
   const [selecao, setSelecao] = useState<Set<string>>(() => new Set())
 
+  const carregarLista = useCallback(async () => {
+    setCarregando(true)
+    try {
+      setDenuncias(await fetchComplaints())
+    } catch {
+      toast.error('Não foi possível carregar as denúncias.')
+      setDenuncias([])
+    } finally {
+      setCarregando(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void carregarLista()
+  }, [carregarLista])
+
   const canaisUnicos = useMemo(() => {
     const s = new Set(denuncias.map((d) => d.canal))
     return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'))
@@ -381,8 +397,8 @@ export function DenunciasPage() {
         d.categoria.toLowerCase().includes(q) ||
         d.canal.toLowerCase().includes(q) ||
         d.departamento.toLowerCase().includes(q) ||
-        d.areaDemanda.toLowerCase().includes(q) ||
-        d.tipoEntrada.toLowerCase().includes(q)
+        d.titulo.toLowerCase().includes(q) ||
+        d.anonimato.toLowerCase().includes(q)
       const matchStatus = filtroStatus === 'todos' || d.status === filtroStatus
       const matchCanal = filtroCanal === 'todos' || d.canal === filtroCanal
       return matchBusca && matchStatus && matchCanal
@@ -554,7 +570,7 @@ export function DenunciasPage() {
               variant="ghost"
               size="icon-sm"
               className="text-muted-foreground hover:text-foreground size-9"
-              onClick={() => toast.message('Lista atualizada (mock).')}
+              onClick={() => void carregarLista()}
               aria-label="Atualizar lista"
             >
               <RefreshCw className="size-4" strokeWidth={1.75} />
@@ -949,11 +965,11 @@ export function DenunciasPage() {
               <TableHead className="text-muted-foreground min-w-[13rem] px-2 py-2.5 text-left text-[11px]">
                 <CabecalhoColuna icone={BriefcaseBusiness} rotulo="Departamento" />
               </TableHead>
-              <TableHead className="text-muted-foreground min-w-[12rem] px-2 py-2.5 text-left text-[11px]">
-                <CabecalhoColuna icone={ClipboardList} rotulo="Área demandada" />
+              <TableHead className="text-muted-foreground min-w-[16rem] px-2 py-2.5 text-left text-[11px]">
+                <CabecalhoColuna icone={FileText} rotulo="Título" />
               </TableHead>
-              <TableHead className="text-muted-foreground min-w-[11rem] px-2 py-2.5 text-left text-[11px]">
-                <CabecalhoColuna icone={Plug} rotulo="Entrada" />
+              <TableHead className="text-muted-foreground min-w-[8rem] px-2 py-2.5 text-left text-[11px]">
+                <CabecalhoColuna icone={UserRound} rotulo="Anonimato" />
               </TableHead>
               <TableHead className="text-muted-foreground min-w-[9.5rem] px-2 py-2.5 text-left text-[11px]">
                 <CabecalhoColuna icone={History} rotulo="Atualizado" />
@@ -972,7 +988,13 @@ export function DenunciasPage() {
             </TableRow>
           </TableHeader>
           <TableBody className="[&_td]:whitespace-normal">
-            {linhas.length === 0 ? (
+            {carregando ? (
+              <TableRow>
+                <TableCell colSpan={colSpanVazio} className="py-14 text-center">
+                  <Spinner className="mx-auto size-5 text-muted-foreground/50" />
+                </TableCell>
+              </TableRow>
+            ) : linhas.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={colSpanVazio}
@@ -1066,11 +1088,18 @@ export function DenunciasPage() {
                     <TableCell className="text-foreground max-w-[14rem] px-2 py-2.5 align-middle text-[12px] leading-snug whitespace-normal">
                       {d.departamento}
                     </TableCell>
-                    <TableCell className="text-muted-foreground max-w-[14rem] px-2 py-2.5 align-middle text-[12px] leading-snug whitespace-normal">
-                      {d.areaDemanda}
+                    <TableCell className="text-foreground max-w-[18rem] px-2 py-2.5 align-middle text-[12px] leading-snug whitespace-normal">
+                      {d.titulo}
                     </TableCell>
-                    <TableCell className="text-muted-foreground max-w-[12rem] px-2 py-2.5 align-middle text-[12px]">
-                      {d.tipoEntrada}
+                    <TableCell className="px-2 py-2.5 align-middle text-[12px]">
+                      <span className={cn(
+                        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
+                        d.anonimato === 'anonimo'
+                          ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          : 'bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300',
+                      )}>
+                        {d.anonimato === 'anonimo' ? 'Anônimo' : 'Identificado'}
+                      </span>
                     </TableCell>
                     <TableCell className="text-muted-foreground px-2 py-2.5 align-middle tabular-nums">
                       {formatoData(d.atualizadoEm)}

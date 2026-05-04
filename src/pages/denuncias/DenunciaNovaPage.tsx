@@ -3,13 +3,11 @@ import {
   BriefcaseBusiness,
   Calendar,
   CircleDot,
-  ClipboardList,
   FileText,
   Gauge,
   Hash,
   MessageSquare,
   PhoneCall,
-  Plug,
   ShieldAlert,
   Tags,
 } from 'lucide-react'
@@ -23,12 +21,10 @@ import {
   type CrudFormField,
 } from '@/components/forms/generic-crud-form'
 import {
-  DENUNCIA_AREAS_DEMANDA_MOCK,
   DENUNCIA_CANAIS_MOCK,
   DENUNCIA_DEPARTAMENTOS_MOCK,
   DENUNCIA_PRIORIDADE_FORM,
   DENUNCIA_STATUS_FORM,
-  DENUNCIA_TIPOS_ENTRADA_MOCK,
 } from '@/pages/denuncias/denuncias-mock'
 
 function defaultDatetimeLocal(): string {
@@ -39,8 +35,6 @@ function defaultDatetimeLocal(): string {
 
 const canalEnum = z.enum(DENUNCIA_CANAIS_MOCK)
 const departamentoEnum = z.enum(DENUNCIA_DEPARTAMENTOS_MOCK)
-const areaEnum = z.enum(DENUNCIA_AREAS_DEMANDA_MOCK)
-const tipoEntradaEnum = z.enum(DENUNCIA_TIPOS_ENTRADA_MOCK)
 
 const novaDenunciaSchema = z.object({
   protocolo: z.string(),
@@ -50,8 +44,6 @@ const novaDenunciaSchema = z.object({
   status: z.enum(['aberta', 'em_analise', 'encerrada']),
   prioridade: z.enum(['P1', 'P2', 'P3']),
   departamento: departamentoEnum,
-  areaDemanda: areaEnum,
-  tipoEntrada: tipoEntradaEnum,
   resumo: z.string().trim().min(20, 'Descreva o fato com um pouco mais de detalhe.'),
 })
 
@@ -65,8 +57,6 @@ const defaultValues: NovaDenunciaValues = {
   status: 'aberta',
   prioridade: 'P2',
   departamento: DENUNCIA_DEPARTAMENTOS_MOCK[0],
-  areaDemanda: DENUNCIA_AREAS_DEMANDA_MOCK[0],
-  tipoEntrada: DENUNCIA_TIPOS_ENTRADA_MOCK[0],
   resumo: '',
 }
 
@@ -119,23 +109,6 @@ const fields: CrudFormField<NovaDenunciaValues>[] = [
     placeholder: 'Selecione',
     icon: BriefcaseBusiness,
     options: DENUNCIA_DEPARTAMENTOS_MOCK.map((v) => ({ value: v, label: v })),
-  },
-  {
-    type: 'select',
-    name: 'areaDemanda',
-    label: 'Área demandada',
-    placeholder: 'Selecione',
-    icon: ClipboardList,
-    options: DENUNCIA_AREAS_DEMANDA_MOCK.map((v) => ({ value: v, label: v })),
-  },
-  {
-    type: 'select',
-    name: 'tipoEntrada',
-    label: 'Entrada',
-    description: 'Mesmo significado da coluna “Entrada” na listagem.',
-    placeholder: 'Selecione',
-    icon: Plug,
-    options: DENUNCIA_TIPOS_ENTRADA_MOCK.map((v) => ({ value: v, label: v })),
   },
   {
     type: 'textarea',

@@ -20,20 +20,24 @@ import {
 } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 import {
   DENUNCIA_PRIORIDADE_FORM,
   DENUNCIA_STATUS_FORM,
-  findDenunciaByProtocolo,
   type DenunciaMock,
   type DenunciaPrioridade,
   type DenunciaStatus,
 } from '@/pages/denuncias/denuncias-mock'
+import { fetchComplaintByProtocol } from '@/services/complaint-service'
 import { InvestigacaoPainelConteudoOriginal } from '@/pages/denuncias/investigacao-painel-conteudo-original'
 import {
   InvestigacaoRecepcaoView,
   isRececaoWorkspaceStep,
 } from '@/pages/denuncias/investigacao-recepcao-view'
-import { canonicalInvestigacaoPhase } from '@/pages/denuncias/investigacao-workspace-canonical'
+import {
+  canonicalInvestigacaoPhase,
+  isTriagemWorkspaceStep,
+} from '@/pages/denuncias/investigacao-workspace-canonical'
 import {
   InvestigacaoEtapasCenterColumn,
   InvestigacaoEtapasRightColumn,
@@ -198,11 +202,13 @@ function ResumoDenunciaInvestigacao({
         <CampoResumoDenuncia rotulo="Departamento">
           {denuncia.departamento}
         </CampoResumoDenuncia>
-        <CampoResumoDenuncia rotulo="Área demandada">
-          <span className="text-muted-foreground">{denuncia.areaDemanda}</span>
+        <CampoResumoDenuncia rotulo="Título">
+          <span className="text-foreground">{denuncia.titulo}</span>
         </CampoResumoDenuncia>
-        <CampoResumoDenuncia rotulo="Tipo de entrada">
-          <span className="text-muted-foreground">{denuncia.tipoEntrada}</span>
+        <CampoResumoDenuncia rotulo="Anonimato">
+          <span className="text-muted-foreground">
+            {denuncia.anonimato === 'anonimo' ? 'Anônimo' : 'Identificado'}
+          </span>
         </CampoResumoDenuncia>
       </div>
 
@@ -280,16 +286,27 @@ export function DenunciaInvestigacaoPage() {
 
   const protocoloDecoded = protocoloParam ? decodeURIComponent(protocoloParam) : ''
 
-  const denuncia = useMemo(
-    () => (protocoloDecoded ? findDenunciaByProtocolo(protocoloDecoded) : undefined),
-    [protocoloDecoded],
-  )
+  const [denuncia, setDenuncia] = useState<DenunciaMock | undefined>(undefined)
+  const [carregandoDenuncia, setCarregandoDenuncia] = useState(true)
 
   useEffect(() => {
-    if (!protocoloDecoded || denuncia) return
-    toast.error('Denúncia não encontrada.')
-    navigate('/app/denuncias', { replace: true })
-  }, [protocoloDecoded, denuncia, navigate])
+    if (!protocoloDecoded) {
+      navigate('/app/denuncias', { replace: true })
+      return
+    }
+    let cancelado = false
+    setCarregandoDenuncia(true)
+    fetchComplaintByProtocol(protocoloDecoded)
+      .then((d) => { if (!cancelado) { setDenuncia(d); setCarregandoDenuncia(false) } })
+      .catch((err: unknown) => {
+        if (cancelado) return
+        setCarregandoDenuncia(false)
+        const msg = err instanceof Error ? err.message : ''
+        toast.error(msg === 'not_found' ? 'Denúncia não encontrada.' : 'Erro ao carregar denúncia.')
+        navigate('/app/denuncias', { replace: true })
+      })
+    return () => { cancelado = true }
+  }, [protocoloDecoded, navigate])
 
   useEffect(() => {
     const bump = () => setGraphTick((n) => n + 1)
@@ -354,13 +371,14 @@ export function DenunciaInvestigacaoPage() {
     return { workspaceStep: cur, transitions: tr }
   }, [steps, workspaceIdx, edges, nodes])
 
-  const modoRecepcaoCompleto = steps.length > 0 && isRececaoWorkspaceStep(workspaceStep)
   const phase = canonicalInvestigacaoPhase(workspaceStep)
+  const modoRecepcaoCompleto =
+    steps.length > 0 && (isRececaoWorkspaceStep(workspaceStep) || isTriagemWorkspaceStep(workspaceStep))
 
-  if (!denuncia) {
+  if (carregandoDenuncia || !denuncia) {
     return (
-      <div className="text-muted-foreground px-4 py-12 text-center text-sm">
-        A carregar…
+      <div className="flex items-center justify-center px-4 py-16">
+        <Spinner className="size-6 text-muted-foreground/50" />
       </div>
     )
   }
@@ -374,6 +392,7 @@ export function DenunciaInvestigacaoPage() {
       >
         <InvestigacaoRecepcaoView
           denuncia={denuncia}
+          phase={phase}
           steps={steps}
           visualFlowOrder={visualFlowOrder}
           suggestedVisualPos={suggestedVisualPos}

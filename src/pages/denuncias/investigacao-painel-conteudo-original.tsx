@@ -1,14 +1,20 @@
 import {
-  Binary,
+  Building2,
   ChevronDown,
   ExternalLink,
   FileText,
+  Globe,
+  Hash,
   Layers,
-  MapPin,
-  MonitorSmartphone,
+  Mail,
+  MessageSquare,
   PaperclipIcon,
+  Phone,
   Shield,
+  Tag,
+  UserRound,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -29,11 +35,43 @@ function formatoData(iso: string) {
   }
 }
 
-/** Coluna esquerda partilhada — modelo Recepção (relato, metadados, anexos). */
+function iconeCanalDenuncia(canal: string): LucideIcon {
+  const c = canal.toLowerCase()
+  if (c.includes('web')) return Globe
+  if (c.includes('telefone')) return Phone
+  if (c.includes('presencial')) return Building2
+  if (c.includes('e-mail') || c.includes('mail')) return Mail
+  return MessageSquare
+}
+
+function CampoMeta({
+  rotulo,
+  valor,
+  icone: Icone,
+  destaque,
+}: {
+  rotulo: string
+  valor: string
+  icone?: LucideIcon
+  destaque?: boolean
+}) {
+  return (
+    <div className="min-w-0 space-y-0.5">
+      <p className="text-muted-foreground text-[9px] font-semibold uppercase tracking-wide">{rotulo}</p>
+      <p className={cn('flex items-center gap-1 text-[11px] leading-snug', destaque ? 'text-foreground font-medium' : 'text-muted-foreground')}>
+        {Icone && <Icone className="size-3 shrink-0 opacity-75" aria-hidden />}
+        {valor || '—'}
+      </p>
+    </div>
+  )
+}
+
+/** Coluna esquerda partilhada — modelo Recepção (dados da denúncia, relato e anexos). */
 export function InvestigacaoPainelConteudoOriginal({
   denuncia,
 }: Readonly<{ denuncia: DenunciaMock }>) {
   const [marcadoSensivel, setMarcadoSensivel] = useState(false)
+  const CanalIcon = iconeCanalDenuncia(denuncia.canal)
 
   return (
     <InvestigacaoWorkspaceSecao
@@ -58,57 +96,62 @@ export function InvestigacaoPainelConteudoOriginal({
         </Button>
       }
     >
+      {/* Ficha da denúncia */}
+      <div className="border-border/50 rounded-md border bg-muted/20 px-3 py-2.5 space-y-2.5">
+        {/* Protocolo + título */}
+        <div className="space-y-0.5">
+          <p className="text-muted-foreground flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide">
+            <Hash className="size-3 shrink-0 opacity-75" aria-hidden />
+            Protocolo
+          </p>
+          <p className="text-foreground font-mono text-xs font-semibold">{denuncia.protocolo}</p>
+        </div>
+        {denuncia.titulo && (
+          <div className="space-y-0.5">
+            <p className="text-muted-foreground flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide">
+              <FileText className="size-3 shrink-0 opacity-75" aria-hidden />
+              Título
+            </p>
+            <p className="text-foreground text-xs font-medium leading-snug">{denuncia.titulo}</p>
+          </div>
+        )}
+        {/* Grid de metadados */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+          <CampoMeta rotulo="Categoria" valor={denuncia.categoria} icone={Tag} destaque />
+          <CampoMeta rotulo="Canal" valor={denuncia.canal} icone={CanalIcon} />
+          <CampoMeta rotulo="Prioridade" valor={denuncia.prioridade} destaque />
+          <CampoMeta
+            rotulo="Anonimato"
+            valor={denuncia.anonimato === 'anonimo' ? 'Anônimo' : 'Identificado'}
+            icone={UserRound}
+          />
+          <CampoMeta rotulo="Departamento" valor={denuncia.departamento} icone={Building2} />
+          <CampoMeta rotulo="Registrado em" valor={formatoData(denuncia.registradoEm)} />
+        </div>
+      </div>
+
+      {/* Relato + anexos */}
       <Collapsible defaultOpen>
         <CollapsibleTrigger className="group text-muted-foreground hover:text-foreground flex w-full items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/25 px-2 py-1.5 text-[11px] font-medium">
           <span className="flex min-w-0 items-center gap-1.5">
             <Layers className="text-muted-foreground size-3.5 shrink-0 opacity-90" aria-hidden />
-            <span className="truncate">Relato · metadados · anexos</span>
-            <span className="text-muted-foreground font-mono text-[10px] opacity-80">{denuncia.protocolo}</span>
+            <span className="truncate">Relato · anexos</span>
           </span>
           <ChevronDown
             className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-180"
             aria-hidden
           />
         </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2">
+        <CollapsibleContent className="pt-2 space-y-2">
           <blockquote
             className={cn(
               'border-primary/35 bg-background text-foreground ring-border/40 max-h-[min(42vh,320px)] overflow-y-auto rounded-md border-l-[3px] px-2.5 py-2 text-xs leading-snug whitespace-pre-wrap ring-1 xl:max-h-[min(55vh,420px)]',
               marcadoSensivel && 'blur-[2.5px] transition-[filter] selection:blur-none',
             )}
           >
-            {denuncia.relatoOriginal}
+            {denuncia.relatoOriginal || '—'}
           </blockquote>
-          <div className="mt-2 grid grid-cols-1 gap-2">
-            <div className="flex gap-2">
-              <Binary className="text-muted-foreground mt-0.5 size-3.5 shrink-0 opacity-85" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <p className="text-muted-foreground text-[9px] font-semibold uppercase">IP</p>
-                <p className="text-foreground mt-0.5 font-mono text-[11px] leading-tight break-all">
-                  {denuncia.metadadosEntrada.ip ?? '— Retido'}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <MapPin className="text-muted-foreground mt-0.5 size-3.5 shrink-0 opacity-85" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <p className="text-muted-foreground text-[9px] font-semibold uppercase">Localização</p>
-                <p className="text-foreground mt-0.5 text-[11px] leading-tight">
-                  {denuncia.metadadosEntrada.localizacaoAprox ?? '—'}
-                </p>
-              </div>
-            </div>
-            <div className="flex min-w-0 gap-2">
-              <MonitorSmartphone className="text-muted-foreground mt-0.5 size-3.5 shrink-0 opacity-85" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <p className="text-muted-foreground text-[9px] font-semibold uppercase">Device</p>
-                <p className="text-muted-foreground mt-0.5 text-[11px] leading-snug break-all">
-                  {denuncia.metadadosEntrada.userAgent ?? '—'}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="mt-2">
+          <div>
             <p className="text-muted-foreground mb-1 flex items-center gap-1.5 text-[10px] font-medium tracking-wide uppercase">
               <PaperclipIcon className="size-3 opacity-90" aria-hidden />
               Anexos
