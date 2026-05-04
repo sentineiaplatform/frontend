@@ -25,6 +25,10 @@ import { StatusDenunciasPage } from '@/pages/dados-mestres/StatusDenunciasPage'
 import { StatusDenunciaFormPage } from '@/pages/dados-mestres/StatusDenunciaFormPage'
 import { WorkflowsPage } from '@/pages/dados-mestres/workflows/WorkflowsPage'
 import { CategoriaDenunciaFormPage } from '@/pages/dados-mestres/CategoriaDenunciaFormPage'
+import { PrioridadeDenunciasPage } from '@/pages/dados-mestres/PrioridadeDenunciasPage'
+import { PrioridadeDenunciaFormPage } from '@/pages/dados-mestres/PrioridadeDenunciaFormPage'
+import { DepartamentoDenunciasPage } from '@/pages/dados-mestres/DepartamentoDenunciasPage'
+import { DepartamentoDenunciaFormPage } from '@/pages/dados-mestres/DepartamentoDenunciaFormPage'
 import { DashboardHomePage } from '@/pages/painel/DashboardHomePage'
 import { DesignSystemSetupPage } from '@/pages/DesignSystemSetupPage'
 import { HomePage } from '@/pages/HomePage'
@@ -68,6 +72,12 @@ export default function App() {
               <Route path="dados-mestres/categoria-denuncias" element={<CategoriaDenunciasPage />} />
               <Route path="dados-mestres/categoria-denuncias/new" element={<CategoriaDenunciaFormPage />} />
               <Route path="dados-mestres/categoria-denuncias/:id" element={<CategoriaDenunciaFormPage />} />
+              <Route path="dados-mestres/prioridade-denuncias" element={<PrioridadeDenunciasPage />} />
+              <Route path="dados-mestres/prioridade-denuncias/new" element={<PrioridadeDenunciaFormPage />} />
+              <Route path="dados-mestres/prioridade-denuncias/:id" element={<PrioridadeDenunciaFormPage />} />
+              <Route path="dados-mestres/departamento-denuncias" element={<DepartamentoDenunciasPage />} />
+              <Route path="dados-mestres/departamento-denuncias/new" element={<DepartamentoDenunciaFormPage />} />
+              <Route path="dados-mestres/departamento-denuncias/:id" element={<DepartamentoDenunciaFormPage />} />
               <Route path="dados-mestres/workflows" element={<WorkflowsPage />} />
               <Route path="analises" element={<AppSectionPage title="Análises" />} />
               <Route path="recursos-pro" element={<AppSectionPage title="Recursos Pro" />} />

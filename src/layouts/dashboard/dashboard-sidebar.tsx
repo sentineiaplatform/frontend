@@ -78,6 +78,8 @@ const parentNavChevronClass =
 const dadosMestresSub = [
   { to: '/app/dados-mestres/status-denuncias', label: 'Status denúncias' },
   { to: '/app/dados-mestres/categoria-denuncias', label: 'Categoria denúncias' },
+  { to: '/app/dados-mestres/prioridade-denuncias', label: 'Prioridade denúncias' },
+  { to: '/app/dados-mestres/departamento-denuncias', label: 'Departamento denúncias' },
   { to: '/app/dados-mestres/workflows', label: 'Workflows' },
 ]
 
