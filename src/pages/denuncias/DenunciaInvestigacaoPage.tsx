@@ -460,6 +460,8 @@ export function DenunciaInvestigacaoPage() {
                 <InvestigacaoEtapasCenterColumn
                   phase={phase}
                   denuncia={denuncia}
+                  investigation={investigation}
+                  onInvestigationUpdated={setInvestigation}
                   workspaceStep={workspaceStep}
                   transitions={transitions}
                 />

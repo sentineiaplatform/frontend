@@ -15,7 +15,7 @@ import {
   Users,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -42,6 +42,7 @@ import {
   deleteInvolved,
   listComments,
   listInvolved,
+  updateInvestigation,
   updateInvolved,
   type InvestigationDto,
 } from '@/services/investigation-service'
@@ -63,14 +64,28 @@ import type { WorkflowRuntimeStep } from '@/pages/denuncias/workflow-runtime'
 
 const MOCK_RESPONSAVEIS = ['Maria Silva · Compliance', 'João Costa · RH', 'Equipa triagem · Pool']
 
-function TriagemCheckItem({ acao, detalhe }: { acao: string; detalhe: string }) {
-  const [checked, setChecked] = useState(false)
+function TriagemCheckItem({
+  acao,
+  detalhe,
+  checked,
+  onToggle,
+}: {
+  acao: string
+  detalhe: string
+  checked: boolean
+  onToggle: () => void
+}) {
   return (
-    <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border/50 bg-background px-2.5 py-2 hover:bg-muted/30 transition-colors">
+    <label
+      className={cn(
+        'flex cursor-pointer items-start gap-2.5 rounded-md border border-border/50 bg-background px-2.5 py-2 transition-colors hover:bg-muted/30',
+        checked && 'border-primary/30 bg-primary/5',
+      )}
+    >
       <Checkbox
         className="mt-0.5 size-4 shrink-0"
         checked={checked}
-        onCheckedChange={(v) => setChecked(Boolean(v))}
+        onCheckedChange={onToggle}
       />
       <div className="min-w-0">
         <p className={cn('text-xs font-medium leading-snug', checked && 'line-through text-muted-foreground')}>
@@ -175,8 +190,90 @@ export function InvestigacaoRecepcaoView({
   const [vinculoProtocolo, setVinculoProtocolo] = useState('')
   const [vinculoTipo, setVinculoTipo] = useState<'DUPLICATE' | 'RELATED' | 'FOLLOW_UP'>('RELATED')
   const [vinculando, setVinculando] = useState(false)
+  const [triagemChecks, setTriagemChecks] = useState<Record<string, boolean>>({})
+  const [triageDecision, setTriageDecision] = useState<'FORMAL' | 'CORRECTIVE' | 'COMMITTEE' | 'ARCHIVED'>('FORMAL')
+  const [triageDecisionReason, setTriageDecisionReason] = useState('')
+  const [leadInvestigatorName, setLeadInvestigatorName] = useState('')
+  const [restrictedAccess, setRestrictedAccess] = useState(false)
+  const [salvandoTriagem, setSalvandoTriagem] = useState(false)
 
   const investigationId = investigation?.id ?? null
+  const triagemStorageKey = `triagem-checklist:${denuncia.id}`
+  const triagemConcluidos = useMemo(
+    () => TRIAGEM_CHECKLIST.filter((item) => triagemChecks[item.acao]).length,
+    [triagemChecks],
+  )
+  const triagemTotal = TRIAGEM_CHECKLIST.length
+  const triagemPercentual = triagemTotal === 0 ? 0 : Math.round((triagemConcluidos / triagemTotal) * 100)
+
+  useEffect(() => {
+    if (!denuncia.id) return
+    try {
+      const raw = localStorage.getItem(triagemStorageKey)
+      if (!raw) {
+        setTriagemChecks({})
+        return
+      }
+      const parsed = JSON.parse(raw) as Record<string, boolean>
+      setTriagemChecks(parsed)
+    } catch {
+      setTriagemChecks({})
+    }
+  }, [denuncia.id, triagemStorageKey])
+
+  useEffect(() => {
+    if (!denuncia.id) return
+    localStorage.setItem(triagemStorageKey, JSON.stringify(triagemChecks))
+  }, [denuncia.id, triagemChecks, triagemStorageKey])
+
+  const alternarCheckTriagem = useCallback((acao: string) => {
+    setTriagemChecks((prev) => ({ ...prev, [acao]: !prev[acao] }))
+  }, [])
+
+  const marcarTodosChecksTriagem = useCallback(() => {
+    const allChecked = TRIAGEM_CHECKLIST.reduce<Record<string, boolean>>((acc, item) => {
+      acc[item.acao] = true
+      return acc
+    }, {})
+    setTriagemChecks(allChecked)
+    toast.success('Checklist concluído.')
+  }, [])
+
+  const limparChecksTriagem = useCallback(() => {
+    setTriagemChecks({})
+    toast.message('Checklist reiniciado.')
+  }, [])
+
+  const guardarTriagem = useCallback(async () => {
+    if (!investigationId) {
+      toast.error('Investigação ainda não disponível.')
+      return
+    }
+    if (!triageDecisionReason.trim()) {
+      toast.message('Preencha a fundamentação da decisão.')
+      return
+    }
+    setSalvandoTriagem(true)
+    try {
+      await updateInvestigation(investigationId, {
+        triageDecision,
+        triageDecisionReason: triageDecisionReason.trim(),
+        leadInvestigatorName: leadInvestigatorName.trim() || null,
+        restrictedAccess,
+      })
+      toast.success('Decisão de triagem guardada.')
+    } catch {
+      toast.error('Erro ao guardar decisão de triagem.')
+    } finally {
+      setSalvandoTriagem(false)
+    }
+  }, [
+    investigationId,
+    triageDecision,
+    triageDecisionReason,
+    leadInvestigatorName,
+    restrictedAccess,
+  ])
 
   useEffect(() => {
     if (!investigationId) return
@@ -188,6 +285,21 @@ export function InvestigacaoRecepcaoView({
       )
       .catch(() => {})
   }, [investigationId])
+
+  useEffect(() => {
+    if (!investigation) return
+    if (
+      investigation.triageDecision === 'FORMAL' ||
+      investigation.triageDecision === 'CORRECTIVE' ||
+      investigation.triageDecision === 'COMMITTEE' ||
+      investigation.triageDecision === 'ARCHIVED'
+    ) {
+      setTriageDecision(investigation.triageDecision)
+    }
+    setTriageDecisionReason(investigation.triageDecisionReason ?? '')
+    setLeadInvestigatorName(investigation.leadInvestigatorName ?? '')
+    setRestrictedAccess(investigation.restrictedAccess)
+  }, [investigation])
 
   useEffect(() => {
     if (!investigationId) return
@@ -361,10 +473,103 @@ export function InvestigacaoRecepcaoView({
                 subtitulo="Verificar cada ponto antes de definir a rota da denúncia."
                 tituloIcon={<ClipboardCheck className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={2} aria-hidden />}
               >
+                <div className="space-y-2 rounded-md border border-border/60 bg-muted/20 px-2.5 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-medium text-muted-foreground">
+                      {triagemConcluidos}/{triagemTotal} itens concluídos
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={marcarTodosChecksTriagem}
+                      >
+                        Marcar todos
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={limparChecksTriagem}
+                      >
+                        Limpar
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${triagemPercentual}%` }}
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
                   {TRIAGEM_CHECKLIST.map((item) => (
-                    <TriagemCheckItem key={item.acao} acao={item.acao} detalhe={item.detalhe} />
+                    <TriagemCheckItem
+                      key={item.acao}
+                      acao={item.acao}
+                      detalhe={item.detalhe}
+                      checked={Boolean(triagemChecks[item.acao])}
+                      onToggle={() => alternarCheckTriagem(item.acao)}
+                    />
                   ))}
+                </div>
+                <div className="space-y-2 rounded-md border border-border/60 bg-muted/15 p-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Decisão de triagem
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Rota do caso</Label>
+                      <Select value={triageDecision} onValueChange={(v) => setTriageDecision(v as typeof triageDecision)}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FORMAL">Abrir investigação formal</SelectItem>
+                          <SelectItem value="CORRECTIVE">Ação corretiva leve</SelectItem>
+                          <SelectItem value="COMMITTEE">Encaminhar comitê</SelectItem>
+                          <SelectItem value="ARCHIVED">Arquivar</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Investigador responsável</Label>
+                      <Input
+                        value={leadInvestigatorName}
+                        onChange={(e) => setLeadInvestigatorName(e.target.value)}
+                        placeholder="Nome do responsável"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 text-[11px]">
+                    <Checkbox checked={restrictedAccess} onCheckedChange={(v) => setRestrictedAccess(Boolean(v))} />
+                    Caso sensível — restringir acesso
+                  </label>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Fundamentação da triagem</Label>
+                    <Textarea
+                      value={triageDecisionReason}
+                      onChange={(e) => setTriageDecisionReason(e.target.value)}
+                      placeholder="Explique admissibilidade, riscos, conflito de interesse e decisão de rota..."
+                      className="min-h-[74px] text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={guardarTriagem}
+                      disabled={salvandoTriagem}
+                    >
+                      {salvandoTriagem ? 'A guardar...' : 'Guardar decisão'}
+                    </Button>
+                  </div>
                 </div>
               </InvestigacaoWorkspaceSecao>
             )}

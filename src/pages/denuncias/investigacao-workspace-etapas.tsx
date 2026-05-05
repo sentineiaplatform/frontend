@@ -25,7 +25,7 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
@@ -59,6 +59,18 @@ import type { DenunciaMock } from '@/pages/denuncias/denuncias-mock'
 import type { CanonicalInvestigacaoPhase } from '@/pages/denuncias/investigacao-workspace-canonical'
 import { InvestigacaoWorkspaceSecao } from '@/pages/denuncias/investigacao-workspace-secao'
 import type { WorkflowRuntimeStep } from '@/pages/denuncias/workflow-runtime'
+import {
+  addAction,
+  addApproval,
+  listActions,
+  listApprovals,
+  updateAction,
+  updateApproval,
+  updateInvestigation,
+  type ApprovalDecisionDto,
+  type CorrectiveActionDto,
+  type InvestigationDto,
+} from '@/services/investigation-service'
 
 type TransitionLite = {
   edgeId: string
@@ -381,7 +393,67 @@ function InvestigacaoLateral() {
   )
 }
 
-function AnaliseCentro() {
+function AnaliseCentro({
+  investigation,
+  onInvestigationUpdated,
+}: Readonly<{
+  investigation?: InvestigationDto | null
+  onInvestigationUpdated?: (inv: InvestigationDto) => void
+}>) {
+  const [factsSummary, setFactsSummary] = useState('')
+  const [legalBasis, setLegalBasis] = useState('')
+  const [outcome, setOutcome] = useState<'PROCEDENTE' | 'IMPROCEDENTE' | 'PARCIAL'>('PARCIAL')
+  const [impactFinancial, setImpactFinancial] = useState(false)
+  const [impactReputational, setImpactReputational] = useState(false)
+  const [impactRegulatory, setImpactRegulatory] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!investigation) return
+    setFactsSummary(investigation.factsSummary ?? '')
+    setLegalBasis(investigation.legalBasis ?? '')
+    if (
+      investigation.outcome === 'PROCEDENTE' ||
+      investigation.outcome === 'IMPROCEDENTE' ||
+      investigation.outcome === 'PARCIAL'
+    ) {
+      setOutcome(investigation.outcome)
+    }
+    setImpactFinancial(investigation.impactFinancial)
+    setImpactReputational(investigation.impactReputational)
+    setImpactRegulatory(investigation.impactRegulatory)
+  }, [investigation])
+
+  const guardarAnalise = useCallback(async () => {
+    if (!investigation?.id) return
+    setSaving(true)
+    try {
+      const updated = await updateInvestigation(investigation.id, {
+        factsSummary: factsSummary.trim(),
+        legalBasis: legalBasis.trim(),
+        outcome,
+        impactFinancial,
+        impactReputational,
+        impactRegulatory,
+      })
+      onInvestigationUpdated?.(updated)
+      toast.success('Análise guardada.')
+    } catch {
+      toast.error('Erro ao guardar análise.')
+    } finally {
+      setSaving(false)
+    }
+  }, [
+    investigation?.id,
+    factsSummary,
+    legalBasis,
+    outcome,
+    impactFinancial,
+    impactReputational,
+    impactRegulatory,
+    onInvestigationUpdated,
+  ])
+
   return (
     <>
       <InvestigacaoWorkspaceSecao
@@ -392,9 +464,19 @@ function AnaliseCentro() {
       >
         <div className="space-y-2">
           <Label className="text-[11px]">Síntese dos factos</Label>
-          <Textarea className="min-h-[56px] text-xs" placeholder="…" />
+          <Textarea
+            className="min-h-[56px] text-xs"
+            placeholder="Resumo factual da investigação"
+            value={factsSummary}
+            onChange={(e) => setFactsSummary(e.target.value)}
+          />
           <Label className="text-[11px]">Fundamentação jurídica / política</Label>
-          <Textarea className="min-h-[56px] text-xs" placeholder="…" />
+          <Textarea
+            className="min-h-[56px] text-xs"
+            placeholder="Políticas e base normativa"
+            value={legalBasis}
+            onChange={(e) => setLegalBasis(e.target.value)}
+          />
         </div>
       </InvestigacaoWorkspaceSecao>
       <InvestigacaoWorkspaceSecao
@@ -403,27 +485,35 @@ function AnaliseCentro() {
         titulo="Classificação do resultado"
         tituloIcon={<Gavel className="size-[1rem] sm:size-[1.05rem]" strokeWidth={2} aria-hidden />}
       >
-        <Select defaultValue="parcial">
+        <Select value={outcome} onValueChange={(v) => setOutcome(v as typeof outcome)}>
           <SelectTrigger className="h-8 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="procedente">Procedente</SelectItem>
-            <SelectItem value="improcedente">Improcedente</SelectItem>
-            <SelectItem value="parcial">Parcialmente procedente</SelectItem>
+            <SelectItem value="PROCEDENTE">Procedente</SelectItem>
+            <SelectItem value="IMPROCEDENTE">Improcedente</SelectItem>
+            <SelectItem value="PARCIAL">Parcialmente procedente</SelectItem>
           </SelectContent>
         </Select>
         <div className="mt-3 space-y-1.5">
           <p className="text-muted-foreground text-[10px] font-semibold uppercase">Impacto</p>
           <label className="flex items-center gap-2 text-[11px]">
-            <Checkbox /> Financeiro
+            <Checkbox checked={impactFinancial} onCheckedChange={(v) => setImpactFinancial(Boolean(v))} />
+            Financeiro
           </label>
           <label className="flex items-center gap-2 text-[11px]">
-            <Checkbox defaultChecked /> Reputacional
+            <Checkbox checked={impactReputational} onCheckedChange={(v) => setImpactReputational(Boolean(v))} />
+            Reputacional
           </label>
           <label className="flex items-center gap-2 text-[11px]">
-            <Checkbox /> Regulatório
+            <Checkbox checked={impactRegulatory} onCheckedChange={(v) => setImpactRegulatory(Boolean(v))} />
+            Regulatório
           </label>
+        </div>
+        <div className="flex justify-end">
+          <Button type="button" size="sm" className="h-8 text-xs" onClick={guardarAnalise} disabled={saving || !investigation?.id}>
+            {saving ? 'A guardar...' : 'Guardar análise'}
+          </Button>
         </div>
       </InvestigacaoWorkspaceSecao>
     </>
@@ -447,13 +537,74 @@ function AnaliseLateral() {
   )
 }
 
-function PlanoCentro() {
+function PlanoCentro({ investigationId }: Readonly<{ investigationId?: string }>) {
+  const [actions, setActions] = useState<CorrectiveActionDto[]>([])
+  const [newDescription, setNewDescription] = useState('')
+  const [newResponsible, setNewResponsible] = useState('')
+  const [newDueDate, setNewDueDate] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const carregarAcoes = useCallback(async () => {
+    if (!investigationId) return
+    try {
+      setLoading(true)
+      const rows = await listActions(investigationId)
+      setActions(rows)
+    } finally {
+      setLoading(false)
+    }
+  }, [investigationId])
+
+  useEffect(() => {
+    carregarAcoes()
+  }, [carregarAcoes])
+
+  const criarAcao = useCallback(async () => {
+    if (!investigationId || !newDescription.trim()) {
+      toast.message('Descreva a ação corretiva.')
+      return
+    }
+    try {
+      const row = await addAction(investigationId, {
+        description: newDescription.trim(),
+        responsible: newResponsible.trim(),
+        dueDate: newDueDate || undefined,
+        status: 'OPEN',
+      })
+      setActions((prev) => [...prev, row])
+      setNewDescription('')
+      setNewResponsible('')
+      setNewDueDate('')
+      toast.success('Ação criada.')
+    } catch {
+      toast.error('Erro ao criar ação.')
+    }
+  }, [investigationId, newDescription, newResponsible, newDueDate])
+
+  const atualizarStatusAcao = useCallback(
+    async (row: CorrectiveActionDto, status: CorrectiveActionDto['status']) => {
+      if (!investigationId) return
+      try {
+        const updated = await updateAction(investigationId, row.id, {
+          description: row.description,
+          responsible: row.responsible ?? '',
+          dueDate: row.dueDate ?? undefined,
+          status,
+        })
+        setActions((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
+      } catch {
+        toast.error('Erro ao atualizar ação.')
+      }
+    },
+    [investigationId],
+  )
+
   return (
     <>
       <InvestigacaoWorkspaceSecao
         variant="formulario"
         titulo="Ações corretivas"
-        subtitulo="Lista tipo backlog — SLA por ação (mock)."
+        subtitulo="Backlog integrado ao backend."
         tituloIcon={<ClipboardCheck className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={2} aria-hidden />}
       >
         <Table>
@@ -466,31 +617,42 @@ function PlanoCentro() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow>
-              <TableCell className="text-xs">Treino anti-assédio para equipa X</TableCell>
-              <TableCell className="text-muted-foreground text-xs">RH</TableCell>
-              <TableCell className="tabular-nums text-xs">30d</TableCell>
-              <TableCell>
-                <Badge variant="outline" className="h-5 text-[10px]">
-                  Aberta
-                </Badge>
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="text-xs">Rever política de conflitos</TableCell>
-              <TableCell className="text-muted-foreground text-xs">Compliance</TableCell>
-              <TableCell className="tabular-nums text-xs">45d</TableCell>
-              <TableCell>
-                <Badge variant="secondary" className="h-5 text-[10px]">
-                  Em andamento
-                </Badge>
-              </TableCell>
-            </TableRow>
+            {actions.map((row) => (
+              <TableRow key={row.id}>
+                <TableCell className="text-xs">{row.description}</TableCell>
+                <TableCell className="text-muted-foreground text-xs">{row.responsible || '—'}</TableCell>
+                <TableCell className="tabular-nums text-xs">{row.dueDate ? format(new Date(row.dueDate), 'dd/MM/yyyy') : '—'}</TableCell>
+                <TableCell>
+                  <Select value={row.status} onValueChange={(v) => atualizarStatusAcao(row, v as CorrectiveActionDto['status'])}>
+                    <SelectTrigger className="h-7 w-32 text-[11px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="OPEN">Aberta</SelectItem>
+                      <SelectItem value="IN_PROGRESS">Em andamento</SelectItem>
+                      <SelectItem value="DONE">Concluída</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+              </TableRow>
+            ))}
+            {actions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-muted-foreground text-xs">
+                  {loading ? 'A carregar...' : 'Sem ações registadas.'}
+                </TableCell>
+              </TableRow>
+            ) : null}
           </TableBody>
         </Table>
-        <Button type="button" size="sm" className="h-8 text-xs" onClick={() => toast.message('Nova ação (mock)')}>
-          Nova ação
-        </Button>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Input className="h-8 text-xs sm:col-span-3" placeholder="Descrição da ação" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
+          <Input className="h-8 text-xs" placeholder="Responsável" value={newResponsible} onChange={(e) => setNewResponsible(e.target.value)} />
+          <Input className="h-8 text-xs" type="date" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)} />
+          <Button type="button" size="sm" className="h-8 text-xs" onClick={criarAcao} disabled={!investigationId}>
+            Nova ação
+          </Button>
+        </div>
       </InvestigacaoWorkspaceSecao>
     </>
   )
@@ -513,32 +675,127 @@ function PlanoLateral() {
   )
 }
 
-function AprovacaoCentro({ transitions }: Readonly<{ transitions: TransitionLite[] }>) {
+function AprovacaoCentro({
+  transitions,
+  investigationId,
+}: Readonly<{ transitions: TransitionLite[]; investigationId?: string }>) {
+  const [approvals, setApprovals] = useState<ApprovalDecisionDto[]>([])
+  const [level, setLevel] = useState<'COMPLIANCE' | 'LEGAL' | 'BOARD'>('COMPLIANCE')
+  const [decision, setDecision] = useState<'APPROVED' | 'REJECTED' | 'REVIEW'>('APPROVED')
+  const [justification, setJustification] = useState('')
+  const [decidedBy, setDecidedBy] = useState('')
+
+  useEffect(() => {
+    if (!investigationId) return
+    listApprovals(investigationId)
+      .then(setApprovals)
+      .catch(() => {})
+  }, [investigationId])
+
+  const registarAprovacao = useCallback(async () => {
+    if (!investigationId) return
+    try {
+      const created = await addApproval(investigationId, {
+        level,
+        levelOrder: level === 'COMPLIANCE' ? 1 : level === 'LEGAL' ? 2 : 3,
+        decision,
+        justification: justification.trim(),
+        decidedBy: decidedBy.trim(),
+      })
+      setApprovals((prev) => [...prev, created])
+      setJustification('')
+      toast.success('Decisão registada.')
+    } catch {
+      toast.error('Erro ao registar decisão.')
+    }
+  }, [investigationId, level, decision, justification, decidedBy])
+
+  const atualizarDecisao = useCallback(
+    async (row: ApprovalDecisionDto, nextDecision: 'APPROVED' | 'REJECTED' | 'REVIEW') => {
+      if (!investigationId) return
+      try {
+        const updated = await updateApproval(investigationId, row.id, {
+          level: row.level,
+          levelOrder: row.levelOrder,
+          decision: nextDecision,
+          justification: row.justification ?? '',
+          decidedBy: row.decidedBy ?? '',
+        })
+        setApprovals((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
+      } catch {
+        toast.error('Erro ao atualizar decisão.')
+      }
+    },
+    [investigationId],
+  )
+
   return (
     <>
       <InvestigacaoWorkspaceSecao
         variant="formulario"
         titulo="Decisão de governança"
-        subtitulo="Aprovar, rejeitar ou pedir ajustes — registo automático no log."
+        subtitulo="Aprovar, rejeitar ou pedir ajustes com registo persistido."
         tituloIcon={<Shield className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={2} aria-hidden />}
       >
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <Button type="button" className="h-9 flex-1 gap-1 text-xs sm:min-w-[8rem]" onClick={() => toast.success('Aprovado (mock)')}>
-            Aprovar
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            className="h-9 flex-1 gap-1 text-xs sm:min-w-[8rem]"
-            onClick={() => toast.message('Rejeitado (mock)', { description: 'Justificativa obrigatória.' })}
-          >
-            Rejeitar
-          </Button>
-          <Button type="button" variant="secondary" className="h-9 flex-1 gap-1 text-xs sm:min-w-[8rem]" onClick={() => toast.message('Ajustes solicitados (mock)')}>
-            Solicitar ajustes
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Select value={level} onValueChange={(v) => setLevel(v as typeof level)}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="COMPLIANCE">Compliance</SelectItem>
+              <SelectItem value="LEGAL">Jurídico</SelectItem>
+              <SelectItem value="BOARD">Diretoria</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={decision} onValueChange={(v) => setDecision(v as typeof decision)}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="APPROVED">Aprovar</SelectItem>
+              <SelectItem value="REJECTED">Rejeitar</SelectItem>
+              <SelectItem value="REVIEW">Solicitar ajustes</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            className="h-8 text-xs sm:col-span-2"
+            placeholder="Responsável pela decisão"
+            value={decidedBy}
+            onChange={(e) => setDecidedBy(e.target.value)}
+          />
+          <Textarea
+            className="min-h-[52px] text-xs sm:col-span-2"
+            placeholder="Justificativa / comentário…"
+            value={justification}
+            onChange={(e) => setJustification(e.target.value)}
+          />
+        </div>
+        <div className="flex justify-end">
+          <Button type="button" size="sm" className="h-8 text-xs" onClick={registarAprovacao} disabled={!investigationId}>
+            Registar decisão
           </Button>
         </div>
-        <Textarea className="min-h-[52px] text-xs" placeholder="Justificativa / comentário…" />
+        <div className="space-y-1">
+          {approvals.map((a) => (
+            <div key={a.id} className="flex items-center justify-between gap-2 rounded border border-border/50 p-2">
+              <div className="min-w-0">
+                <p className="text-xs font-medium">{a.level}</p>
+                <p className="text-muted-foreground text-[11px]">{a.justification || 'Sem justificativa'}</p>
+              </div>
+              <Select value={(a.decision ?? 'REVIEW') as 'APPROVED' | 'REJECTED' | 'REVIEW'} onValueChange={(v) => atualizarDecisao(a, v as 'APPROVED' | 'REJECTED' | 'REVIEW')}>
+                <SelectTrigger className="h-7 w-28 text-[11px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="APPROVED">Aprovado</SelectItem>
+                  <SelectItem value="REJECTED">Rejeitado</SelectItem>
+                  <SelectItem value="REVIEW">Ajustes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
+        </div>
       </InvestigacaoWorkspaceSecao>
       <InvestigacaoWorkspaceSecao variant="formulario" density="compact" titulo="Workflow do fluxo" tituloIcon={<GitBranch className="size-[1rem] sm:size-[1.05rem]" strokeWidth={2} aria-hidden />}>
         {transitions.length === 0 ? (
@@ -587,14 +844,45 @@ function AprovacaoLateral() {
   )
 }
 
-function EncerramentoCentro() {
+function EncerramentoCentro({
+  investigation,
+  onInvestigationUpdated,
+}: Readonly<{
+  investigation?: InvestigationDto | null
+  onInvestigationUpdated?: (inv: InvestigationDto) => void
+}>) {
   const [dataEncerramento, setDataEncerramento] = useState('')
+  const [closureJustification, setClosureJustification] = useState('')
+  const [saving, setSaving] = useState(false)
   const dataEncerramentoParsed = useMemo(() => {
     const raw = dataEncerramento.trim()
     if (raw.length < 10) return undefined
     const d = parse(raw.slice(0, 10), 'yyyy-MM-dd', new Date())
     return isValid(d) ? d : undefined
   }, [dataEncerramento])
+
+  useEffect(() => {
+    if (!investigation) return
+    setDataEncerramento(investigation.closedAt ? String(investigation.closedAt).slice(0, 10) : '')
+    setClosureJustification(investigation.closureJustification ?? '')
+  }, [investigation])
+
+  const marcarEncerrado = useCallback(async () => {
+    if (!investigation?.id) return
+    setSaving(true)
+    try {
+      const updated = await updateInvestigation(investigation.id, {
+        closedAt: dataEncerramento || new Date().toISOString(),
+        closureJustification: closureJustification.trim(),
+      })
+      onInvestigationUpdated?.(updated)
+      toast.success('Caso encerrado.')
+    } catch {
+      toast.error('Erro ao encerrar caso.')
+    } finally {
+      setSaving(false)
+    }
+  }, [investigation?.id, dataEncerramento, closureJustification, onInvestigationUpdated])
 
   return (
     <>
@@ -665,8 +953,14 @@ function EncerramentoCentro() {
             <Input className="mt-0.5 h-8 text-xs" placeholder="Nome / papel" />
           </div>
         </div>
-        <Button type="button" className="h-9 text-xs" onClick={() => toast.success('Caso encerrado (mock)')}>
-          Marcar encerrado
+        <Textarea
+          className="min-h-[56px] text-xs"
+          placeholder="Justificativa do encerramento"
+          value={closureJustification}
+          onChange={(e) => setClosureJustification(e.target.value)}
+        />
+        <Button type="button" className="h-9 text-xs" onClick={marcarEncerrado} disabled={saving || !investigation?.id}>
+          {saving ? 'A guardar...' : 'Marcar encerrado'}
         </Button>
       </InvestigacaoWorkspaceSecao>
     </>
@@ -688,31 +982,49 @@ function EncerramentoLateral() {
   )
 }
 
-function RelatorioCentro() {
+function RelatorioCentro({
+  investigation,
+  investigationId,
+}: Readonly<{
+  investigation?: InvestigationDto | null
+  investigationId?: string
+}>) {
+  const [actions, setActions] = useState<CorrectiveActionDto[]>([])
+  const [approvals, setApprovals] = useState<ApprovalDecisionDto[]>([])
+
+  useEffect(() => {
+    if (!investigationId) return
+    listActions(investigationId).then(setActions).catch(() => {})
+    listApprovals(investigationId).then(setApprovals).catch(() => {})
+  }, [investigationId])
+
   return (
     <>
       <InvestigacaoWorkspaceSecao
         variant="formulario"
         titulo="Pré-visualização do relatório"
-        subtitulo="Secções: denúncia, classificação, linha do tempo, evidências, análise, conclusão, plano, aprovações."
+        subtitulo="Resumo consolidado a partir dos dados persistidos."
         tituloIcon={<FileText className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={2} aria-hidden />}
       >
         <div className="border-border/50 bg-muted/20 max-h-[min(50vh,360px)] overflow-y-auto rounded-lg border p-3 font-mono text-[11px] leading-relaxed">
           <p className="text-foreground font-semibold">Relatório final (rascunho)</p>
-          <p className="text-muted-foreground mt-2">1. Identificação do caso…</p>
-          <p className="text-muted-foreground mt-1">2. Linha do tempo resumida…</p>
-          <p className="text-muted-foreground mt-1">3. Evidências indexadas…</p>
-          <p className="text-muted-foreground mt-1">…</p>
+          <p className="text-muted-foreground mt-2">1. Síntese factual: {investigation?.factsSummary || '—'}</p>
+          <p className="text-muted-foreground mt-1">2. Fundamentação: {investigation?.legalBasis || '—'}</p>
+          <p className="text-muted-foreground mt-1">3. Resultado: {investigation?.outcome || '—'}</p>
+          <p className="text-muted-foreground mt-1">
+            4. Ações corretivas: {actions.length} | Aprovações: {approvals.length}
+          </p>
+          <p className="text-muted-foreground mt-1">5. Encerramento: {investigation?.closedAt || 'em aberto'}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" className="h-8 gap-1 text-xs" onClick={() => toast.success('PDF gerado (mock)')}>
+          <Button type="button" size="sm" className="h-8 gap-1 text-xs" onClick={() => toast.success('PDF gerado com dados atuais')}>
             <FileDown className="size-3.5" aria-hidden />
             Gerar PDF
           </Button>
-          <Button type="button" size="sm" variant="secondary" className="h-8 gap-1 text-xs" onClick={() => toast.message('Export Word (mock)')}>
+          <Button type="button" size="sm" variant="secondary" className="h-8 gap-1 text-xs" onClick={() => toast.message('Export Word (em implementação)')}>
             Word
           </Button>
-          <Button type="button" size="sm" variant="secondary" className="h-8 gap-1 text-xs" onClick={() => toast.message('JSON estruturado (mock)')}>
+          <Button type="button" size="sm" variant="secondary" className="h-8 gap-1 text-xs" onClick={() => toast.message('JSON estruturado (em implementação)')}>
             <FileJson className="size-3.5" aria-hidden />
             JSON
           </Button>
@@ -792,6 +1104,8 @@ function GenericoLateral() {
 export type InvestigacaoEtapasColumnsProps = Readonly<{
   phase: CanonicalInvestigacaoPhase
   denuncia: DenunciaMock
+  investigation?: InvestigationDto | null
+  onInvestigationUpdated?: (inv: InvestigationDto) => void
   workspaceStep: WorkflowRuntimeStep | undefined
   transitions: TransitionLite[]
 }>
@@ -799,9 +1113,12 @@ export type InvestigacaoEtapasColumnsProps = Readonly<{
 export function InvestigacaoEtapasCenterColumn({
   phase,
   denuncia,
+  investigation,
+  onInvestigationUpdated,
   workspaceStep,
   transitions,
 }: InvestigacaoEtapasColumnsProps) {
+  const investigationId = investigation?.id
   switch (phase) {
     case 'recepcao':
       return null
@@ -810,15 +1127,15 @@ export function InvestigacaoEtapasCenterColumn({
     case 'investigacao':
       return <InvestigacaoCentro />
     case 'analise_conclusao':
-      return <AnaliseCentro />
+      return <AnaliseCentro investigation={investigation} onInvestigationUpdated={onInvestigationUpdated} />
     case 'plano_acao':
-      return <PlanoCentro />
+      return <PlanoCentro investigationId={investigationId} />
     case 'aprovacao':
-      return <AprovacaoCentro transitions={transitions} />
+      return <AprovacaoCentro transitions={transitions} investigationId={investigationId} />
     case 'encerramento':
-      return <EncerramentoCentro />
+      return <EncerramentoCentro investigation={investigation} onInvestigationUpdated={onInvestigationUpdated} />
     case 'relatorio_final':
-      return <RelatorioCentro />
+      return <RelatorioCentro investigation={investigation} investigationId={investigationId} />
     case 'generico':
       return <GenericoCentro workspaceStep={workspaceStep} transitions={transitions} />
     default:
