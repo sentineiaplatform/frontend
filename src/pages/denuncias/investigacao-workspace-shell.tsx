@@ -152,6 +152,8 @@ export type InvestigacaoWorkspaceShellProps = Readonly<{
   setWorkspaceStepIndex: (stepIndex: number) => void
   /** Coluna esquerda (ex.: conteúdo original). */
   leftColumn: ReactNode
+  /** Esconde a coluna esquerda (ex.: triagem). */
+  hideLeftColumn?: boolean
   /** Coluna central (área principal da etapa). */
   centerColumn: ReactNode
   /** Coluna direita (contexto / decisões). */
@@ -170,6 +172,7 @@ export function InvestigacaoWorkspaceShell({
   workspaceVisualPos,
   setWorkspaceStepIndex,
   leftColumn,
+  hideLeftColumn = false,
   centerColumn,
   rightColumn,
   floatingSlot,
@@ -363,13 +366,22 @@ export function InvestigacaoWorkspaceShell({
         ) : null}
       </header>
 
-      <div className="grid min-w-0 gap-3 pb-24 md:pb-28 xl:grid-cols-[minmax(280px,304px)_minmax(0,1fr)_minmax(280px,304px)] xl:items-start xl:gap-4">
-        <aside
-          className={cn('flex min-w-0 flex-col', 'xl:sticky xl:top-40 xl:self-start')}
-          aria-label="Contexto — registo de entrada"
-        >
-          {leftColumn}
-        </aside>
+      <div
+        className={cn(
+          'grid min-w-0 gap-3 pb-24 md:pb-28 xl:items-start xl:gap-4',
+          hideLeftColumn
+            ? 'xl:grid-cols-[minmax(0,1fr)_minmax(280px,304px)]'
+            : 'xl:grid-cols-[minmax(280px,304px)_minmax(0,1fr)_minmax(280px,304px)]',
+        )}
+      >
+        {!hideLeftColumn ? (
+          <aside
+            className={cn('flex min-w-0 flex-col', 'xl:sticky xl:top-40 xl:self-start')}
+            aria-label="Contexto — registo de entrada"
+          >
+            {leftColumn}
+          </aside>
+        ) : null}
 
         <div className="min-w-0 space-y-2">{centerColumn}</div>
 

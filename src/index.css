@@ -239,3 +239,29 @@
   border-left: 3px solid color-mix(in oklch, var(--border) 70%, var(--primary));
   color: var(--muted-foreground);
 }
+
+/* Checklist de triagem — microanimação ao concluir passo (estilo Linear) */
+@keyframes triagem-check-pop {
+  0% {
+    transform: scale(0.35);
+    opacity: 0.35;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.triagem-check-pop {
+  animation: triagem-check-pop 0.35s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .triagem-check-pop {
+    animation: none;
+  }
+}

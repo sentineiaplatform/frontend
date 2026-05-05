@@ -1131,23 +1131,6 @@ export function DenunciasPage() {
                             <button
                               type="button"
                               className={cn(
-                                'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background',
-                                'shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',
-                              )}
-                              title="Anotar"
-                              aria-label={`Anotar ${d.protocolo}`}
-                              onClick={() => toast.message(`Anotar: ${d.protocolo} (mock).`)}
-                            >
-                              <Tags className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">Anotar</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className={cn(
                                 d.ativa
                                   ? 'inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-destructive/40 bg-background text-destructive shadow-sm transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-destructive/30 focus-visible:outline-none'
                                   : 'text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/90 bg-background shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none',

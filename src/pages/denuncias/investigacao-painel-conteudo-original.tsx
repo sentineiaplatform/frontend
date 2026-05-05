@@ -15,6 +15,7 @@ import {
   UserRound,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -69,7 +70,8 @@ function CampoMeta({
 /** Coluna esquerda partilhada — modelo Recepção (dados da denúncia, relato e anexos). */
 export function InvestigacaoPainelConteudoOriginal({
   denuncia,
-}: Readonly<{ denuncia: DenunciaMock }>) {
+  acaoMetadados,
+}: Readonly<{ denuncia: DenunciaMock; acaoMetadados?: ReactNode }>) {
   const [marcadoSensivel, setMarcadoSensivel] = useState(false)
   const CanalIcon = iconeCanalDenuncia(denuncia.canal)
 
@@ -79,21 +81,33 @@ export function InvestigacaoPainelConteudoOriginal({
       titulo="Conteúdo original"
       tituloIcon={<FileText className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={2} aria-hidden />}
       acao={
-        <Button
-          type="button"
-          variant={marcadoSensivel ? 'default' : 'outline'}
-          size="sm"
-          className="h-7 gap-1 px-2 text-[11px]"
-          onClick={() => {
-            setMarcadoSensivel((v) => !v)
-            toast.message(
-              marcadoSensivel ? 'Marcador sensível removido (mock).' : 'Marcado como sensível (mock).',
-            )
-          }}
-        >
-          <Shield className="size-3" aria-hidden />
-          Sensível
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1 px-2 text-[11px]"
+            onClick={() => toast.message('Abertura de chat com denunciante (mock).')}
+          >
+            <MessageSquare className="size-3" aria-hidden />
+            Falar com denunciante
+          </Button>
+          <Button
+            type="button"
+            variant={marcadoSensivel ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 gap-1 px-2 text-[11px]"
+            onClick={() => {
+              setMarcadoSensivel((v) => !v)
+              toast.message(
+                marcadoSensivel ? 'Marcador sensível removido (mock).' : 'Marcado como sensível (mock).',
+              )
+            }}
+          >
+            <Shield className="size-3" aria-hidden />
+            Sensível
+          </Button>
+        </div>
       }
     >
       {/* Ficha da denúncia */}
@@ -128,14 +142,15 @@ export function InvestigacaoPainelConteudoOriginal({
           <CampoMeta rotulo="Departamento" valor={denuncia.departamento} icone={Building2} />
           <CampoMeta rotulo="Registrado em" valor={formatoData(denuncia.registradoEm)} />
         </div>
+        {acaoMetadados ? <div>{acaoMetadados}</div> : null}
       </div>
 
-      {/* Relato + anexos */}
+      {/* Anexos */}
       <Collapsible defaultOpen>
         <CollapsibleTrigger className="group text-muted-foreground hover:text-foreground flex w-full items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/25 px-2 py-1.5 text-[11px] font-medium">
           <span className="flex min-w-0 items-center gap-1.5">
             <Layers className="text-muted-foreground size-3.5 shrink-0 opacity-90" aria-hidden />
-            <span className="truncate">Relato · anexos</span>
+            <span className="truncate">Anexos</span>
           </span>
           <ChevronDown
             className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-180"
@@ -143,14 +158,6 @@ export function InvestigacaoPainelConteudoOriginal({
           />
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-2 space-y-2">
-          <blockquote
-            className={cn(
-              'border-primary/35 bg-background text-foreground ring-border/40 max-h-[min(42vh,320px)] overflow-y-auto rounded-md border-l-[3px] px-2.5 py-2 text-xs leading-snug whitespace-pre-wrap ring-1 xl:max-h-[min(55vh,420px)]',
-              marcadoSensivel && 'blur-[2.5px] transition-[filter] selection:blur-none',
-            )}
-          >
-            {denuncia.relatoOriginal || '—'}
-          </blockquote>
           <div>
             <p className="text-muted-foreground mb-1 flex items-center gap-1.5 text-[10px] font-medium tracking-wide uppercase">
               <PaperclipIcon className="size-3 opacity-90" aria-hidden />

@@ -25,7 +25,8 @@ export function canonicalInvestigacaoPhase(
   if (!step) return 'generico'
   const l = L(step.label)
 
-  if (l.includes('triagem') || l.includes('classific') || l.includes('rececao') || l.includes('receber') || l.includes('recep')) return 'triagem'
+  if (l.includes('rececao') || l.includes('receber') || l.includes('recep')) return 'recepcao'
+  if (l.includes('triagem') || l.includes('classific')) return 'triagem'
   if (l.includes('relatorio') && (l.includes('final') || l.includes('fin'))) return 'relatorio_final'
   if (l.includes('encerr')) return 'encerramento'
   if (l.includes('aprov')) return 'aprovacao'
@@ -38,7 +39,7 @@ export function canonicalInvestigacaoPhase(
 }
 
 export function isRececaoWorkspaceStep(step: WorkflowRuntimeStep | undefined): boolean {
-  return canonicalInvestigacaoPhase(step) === 'triagem'
+  return canonicalInvestigacaoPhase(step) === 'recepcao'
 }
 
 export function isTriagemWorkspaceStep(step: WorkflowRuntimeStep | undefined): boolean {
@@ -50,8 +51,8 @@ export const CANONICAL_PHASE_META: Record<
   { titulo: string; objetivo: string }
 > = {
   recepcao: {
-    titulo: 'Triagem',
-    objetivo: 'Receção, classificação inicial e decisão de rota.',
+    titulo: 'Recepção',
+    objetivo: 'Leitura inicial e entendimento completo do relato original.',
   },
   triagem: {
     titulo: 'Triagem',

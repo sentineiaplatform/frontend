@@ -163,25 +163,39 @@ export function HomePage() {
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3">
           <SentineLogo size="md" />
           <nav className="hidden items-center gap-5 text-sm text-muted-foreground md:flex">
-            <a href="#recursos" className="transition-colors hover:text-foreground">
-              Recursos
+            <a href="#recursos" className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+              <GlobeIcon className="size-3.5" aria-hidden />
+              <span>Recursos</span>
             </a>
-            <a href="#produto" className="transition-colors hover:text-foreground">
-              Produto
+            <a href="#produto" className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+              <WorkflowIcon className="size-3.5" aria-hidden />
+              <span>Produto</span>
             </a>
-            <a href="#planos" className="transition-colors hover:text-foreground">
-              Planos
+            <a href="#planos" className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+              <BarChart3Icon className="size-3.5" aria-hidden />
+              <span>Planos</span>
             </a>
-            <a href="#faq" className="transition-colors hover:text-foreground">
-              FAQ
+            <a href="#faq" className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+              <MessageSquareQuoteIcon className="size-3.5" aria-hidden />
+              <span>FAQ</span>
             </a>
           </nav>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" className="focus-visible:ring-2 focus-visible:ring-primary" asChild>
-              <Link to="/login">Entrar</Link>
+            <Button
+              variant="ghost"
+              className="h-10 px-3 text-sm focus-visible:ring-2 focus-visible:ring-primary"
+              asChild
+            >
+              <Link to="/login" className="inline-flex items-center gap-1.5">
+                <LockIcon className="size-4" aria-hidden />
+                <span>Entrar</span>
+              </Link>
             </Button>
-            <Button className="focus-visible:ring-2 focus-visible:ring-primary" asChild>
-              <Link to="/cadastro">Teste grátis</Link>
+            <Button className="h-10 px-3 text-sm focus-visible:ring-2 focus-visible:ring-primary" asChild>
+              <Link to="/cadastro" className="inline-flex items-center gap-1.5">
+                <SparklesIcon className="size-4" aria-hidden />
+                <span>Teste grátis</span>
+              </Link>
             </Button>
           </div>
         </div>
@@ -221,13 +235,18 @@ export function HomePage() {
               })}
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button size="lg" className="gap-2 focus-visible:ring-2 focus-visible:ring-primary" asChild>
+              <Button size="lg" className="h-11 gap-2 px-5 text-sm focus-visible:ring-2 focus-visible:ring-primary" asChild>
                 <Link to="/cadastro">
                   Iniciar avaliação
                   <ArrowRightIcon className="size-4" aria-hidden />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="focus-visible:ring-2 focus-visible:ring-primary" asChild>
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-11 px-5 text-sm focus-visible:ring-2 focus-visible:ring-primary"
+                asChild
+              >
                 <Link to="/login">Acessar plataforma</Link>
               </Button>
             </div>
@@ -373,7 +392,7 @@ export function HomePage() {
                     <FeatureTick key={feature}>{feature}</FeatureTick>
                   ))}
                 </ul>
-                <Button className="w-full focus-visible:ring-2 focus-visible:ring-primary" asChild>
+                <Button className="h-11 w-full text-sm focus-visible:ring-2 focus-visible:ring-primary" asChild>
                   <Link to="/cadastro">{plan.cta}</Link>
                 </Button>
               </CardContent>
@@ -439,10 +458,13 @@ export function HomePage() {
             Centralize denúncias, investigação e decisão em uma plataforma única com paleta e experiência alinhadas ao dashboard.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Button className="bg-primary text-primary-foreground hover:opacity-95 focus-visible:ring-2 focus-visible:ring-primary" asChild>
+            <Button
+              className="h-11 px-5 text-sm bg-primary text-primary-foreground hover:opacity-95 focus-visible:ring-2 focus-visible:ring-primary"
+              asChild
+            >
               <Link to="/cadastro">Quero testar agora</Link>
             </Button>
-            <Button variant="secondary" className="focus-visible:ring-2 focus-visible:ring-white/70" asChild>
+            <Button variant="secondary" className="h-11 px-5 text-sm focus-visible:ring-2 focus-visible:ring-white/70" asChild>
               <Link to="/login">Entrar na plataforma</Link>
             </Button>
           </div>

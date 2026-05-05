@@ -1,7 +1,7 @@
 import {
   BellIcon,
   CircleUserIcon,
-  LayoutGridIcon,
+  MessageCircleIcon,
   LogOutIcon,
   MailIcon,
   UserIcon,
@@ -94,15 +94,24 @@ export function DashboardHeader() {
             </span>
           ) : null}
         </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className={headerIconButtonClass}
-          aria-label="Atalhos do sistema"
-        >
-          <LayoutGridIcon className="size-[1.125rem]" />
-        </Button>
+        <span className="relative inline-flex shrink-0">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className={headerIconButtonClass}
+            aria-label="Atalhos do sistema"
+          >
+            <MessageCircleIcon className="size-[1.125rem]" />
+          </Button>
+          <span
+            className={cn(
+              'pointer-events-none absolute top-0 right-0 block size-2.5 -translate-y-0.5 translate-x-0.5 rounded-full',
+              'bg-emerald-500 ring-2 ring-brand-navy',
+            )}
+            aria-hidden
+          />
+        </span>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
